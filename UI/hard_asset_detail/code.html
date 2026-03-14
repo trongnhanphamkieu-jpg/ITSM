@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ITMS - Asset Detail AST-2026-001</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2d00d",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#221f10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center p-2 rounded-lg bg-primary/20 text-slate-900 dark:text-primary">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">ITMS Asset Manager</h2>
+</div>
+<div class="flex flex-1 justify-end gap-4 items-center">
+<div class="hidden md:flex relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+<input class="w-full pl-10 pr-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border-none focus:ring-2 focus:ring-primary text-sm" placeholder="Search assets..." type="text"/>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<div class="flex flex-1">
+<!-- Sidebar Navigation -->
+<aside class="hidden lg:flex w-64 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shrink-0">
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-slate-900 dark:text-primary font-semibold transition-all" href="#">
+<span class="material-symbols-outlined">laptop_mac</span>
+<span class="text-sm">Assets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span class="text-sm">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="text-sm">Maintenance</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-sm">Reports</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col p-6 max-w-7xl mx-auto w-full gap-6">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Assets</a>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Hard Inventory</a>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">AST-2026-001</span>
+</nav>
+<!-- Asset Hero Section -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<div class="flex items-start md:items-center gap-6">
+<div class="relative group">
+<div class="w-32 h-32 md:w-40 md:h-40 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+<img alt="MacBook Pro" class="object-cover w-full h-full" data-alt="Professional silver laptop on a clean desk" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsfhgHA58zi8vVgsiWU1QgcGptUuE-ZIb7HyjUd1wX66WpJM4yESXrPr0y_GxLuTR86zZ2Sxmv0BQckAcPvBwgXziIUEhoM_Lk1WnX2MXkg-FbsBcmB5mq-NBRrTPOPURzFbLef88uCBQGv8JsobDWVv7ziSuq9uh_DSMwJc3POjylPWf9D7IK2XMpQAX06Rg0ZoW5ptvblTU519Wo_ItJP8p2nXDuhi4X_mJF3yGCnkaqp9i4PXKzaEmsIB5BCXEhAVnHuim0nljQ"/>
+</div>
+<button class="absolute bottom-2 right-2 p-1.5 bg-white dark:bg-slate-700 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm">photo_camera</span>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">Hard Inventory</span>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold uppercase tracking-tight">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                        In Use
+                                    </div>
+</div>
+<h1 class="text-3xl font-extrabold text-slate-900 dark:text-white leading-tight">MacBook Pro 16 M3</h1>
+<p class="text-slate-500 dark:text-slate-400 font-medium text-lg">Tag: <span class="text-slate-900 dark:text-slate-200">AST-2026-001</span></p>
+</div>
+</div>
+<div class="flex flex-wrap gap-3 h-fit">
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-lg transition-all text-sm">
+<span class="material-symbols-outlined text-xl">edit</span>
+                                Edit
+                            </button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold rounded-lg transition-all text-sm">
+<span class="material-symbols-outlined text-xl">person_add</span>
+                                Assign
+                            </button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-slate-900 font-bold rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all text-sm">
+<span class="material-symbols-outlined text-xl">engineering</span>
+                                Maintenance
+                            </button>
+</div>
+</div>
+</div>
+<!-- Tabs Navigation -->
+<div class="flex border-b border-slate-200 dark:border-slate-800 overflow-x-auto whitespace-nowrap">
+<button class="px-6 py-3 text-sm font-bold border-b-2 border-primary text-slate-900 dark:text-white">Overview</button>
+<button class="px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-b-2 border-transparent hover:border-slate-300 transition-all">History</button>
+<button class="px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-b-2 border-transparent hover:border-slate-300 transition-all">Maintenance</button>
+<button class="px-6 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border-b-2 border-transparent hover:border-slate-300 transition-all">Documents</button>
+</div>
+<!-- Detail Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left: Specifications & Details -->
+<div class="lg:col-span-2 space-y-6">
+<section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<h3 class="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">terminal</span>
+                                Hardware Specifications
+                            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+<div class="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800/50">
+<span class="text-slate-500 text-sm">Processor</span>
+<span class="text-slate-900 dark:text-slate-200 text-sm font-medium">Apple M3 Max (14-core)</span>
+</div>
+<div class="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800/50">
+<span class="text-slate-500 text-sm">Memory</span>
+<span class="text-slate-900 dark:text-slate-200 text-sm font-medium">64GB Unified RAM</span>
+</div>
+<div class="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800/50">
+<span class="text-slate-500 text-sm">Storage</span>
+<span class="text-slate-900 dark:text-slate-200 text-sm font-medium">1TB SSD</span>
+</div>
+<div class="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800/50">
+<span class="text-slate-500 text-sm">Display</span>
+<span class="text-slate-900 dark:text-slate-200 text-sm font-medium">16.2-inch Liquid Retina XDR</span>
+</div>
+<div class="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800/50">
+<span class="text-slate-500 text-sm">Serial Number</span>
+<span class="text-slate-900 dark:text-slate-200 text-sm font-medium font-mono">C02Z6789LVD1</span>
+</div>
+<div class="flex justify-between py-2 border-b border-slate-50 dark:border-slate-800/50">
+<span class="text-slate-500 text-sm">Color</span>
+<span class="text-slate-900 dark:text-slate-200 text-sm font-medium">Space Black</span>
+</div>
+</div>
+</section>
+<section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<h3 class="text-base font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">shopping_bag</span>
+                                Purchase Information
+                            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+<div class="flex flex-col gap-1">
+<span class="text-slate-500 text-xs font-bold uppercase tracking-wider">Purchase Date</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">October 14, 2025</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-slate-500 text-xs font-bold uppercase tracking-wider">Warranty Expiration</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">October 14, 2028 (AppleCare+)</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-slate-500 text-xs font-bold uppercase tracking-wider">Vendor</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">Apple Enterprise Direct</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-slate-500 text-xs font-bold uppercase tracking-wider">Purchase Order</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium font-mono">PO-992-881</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Sidebar: Assignee & Summary -->
+<div class="space-y-6">
+<section class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<h3 class="text-base font-bold text-slate-900 dark:text-white mb-4">Current Assignee</h3>
+<div class="flex items-center gap-4 p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+<div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center font-bold text-slate-900 text-lg">
+                                    JD
+                                </div>
+<div class="flex flex-col">
+<span class="text-slate-900 dark:text-white font-bold">Johnathan Doe</span>
+<span class="text-slate-500 dark:text-slate-400 text-xs">Senior UX Designer</span>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-500">Department</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">Product Design</span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-500">Location</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">San Francisco (HQ)</span>
+</div>
+<div class="flex items-center justify-between text-sm">
+<span class="text-slate-500">Assigned Date</span>
+<span class="text-slate-900 dark:text-slate-200 font-medium">Nov 02, 2025</span>
+</div>
+</div>
+</section>
+<section class="bg-slate-900 dark:bg-slate-800 text-white rounded-xl p-6 shadow-xl relative overflow-hidden">
+<div class="relative z-10">
+<h3 class="text-lg font-bold mb-4">Asset Health</h3>
+<div class="flex items-center justify-between mb-2">
+<span class="text-slate-400 text-sm">Performance Score</span>
+<span class="text-primary font-bold">98%</span>
+</div>
+<div class="w-full bg-slate-700 rounded-full h-1.5 mb-6">
+<div class="bg-primary h-1.5 rounded-full" style="width: 98%"></div>
+</div>
+<button class="w-full py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 dark:hover:bg-slate-600 border border-slate-700 dark:border-slate-600 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">speed</span>
+                                    Run Diagnostics
+                                </button>
+</div>
+<!-- Background pattern -->
+<div class="absolute top-0 right-0 -mr-12 -mt-12 opacity-10">
+<span class="material-symbols-outlined text-[160px]">laptop_mac</span>
+</div>
+</section>
+</div>
+</div>
+<!-- Recent Activities (Compact) -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-base font-bold text-slate-900 dark:text-white">Recent Activities</h3>
+<button class="text-primary text-sm font-bold hover:underline">View All</button>
+</div>
+<div class="space-y-6">
+<div class="flex gap-4 relative">
+<div class="absolute left-3 top-7 bottom-[-24px] w-px bg-slate-200 dark:bg-slate-800"></div>
+<div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 flex items-center justify-center z-10 shrink-0">
+<span class="material-symbols-outlined text-[14px] font-bold">check</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold text-slate-900 dark:text-white">Software Update Applied</p>
+<span class="text-slate-400 text-xs">2 hours ago</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">macOS Sonoma 14.2.1 successfully installed by System</p>
+</div>
+</div>
+<div class="flex gap-4 relative">
+<div class="absolute left-3 top-7 bottom-[-24px] w-px bg-slate-200 dark:bg-slate-800"></div>
+<div class="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center z-10 shrink-0">
+<span class="material-symbols-outlined text-[14px] font-bold">assignment_ind</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold text-slate-900 dark:text-white">Assigned to Johnathan Doe</p>
+<span class="text-slate-400 text-xs">Nov 02, 2025</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Asset transferred from IT Stock to Design Department</p>
+</div>
+</div>
+<div class="flex gap-4 relative">
+<div class="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center z-10 shrink-0">
+<span class="material-symbols-outlined text-[14px] font-bold">add</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold text-slate-900 dark:text-white">Asset Onboarded</p>
+<span class="text-slate-400 text-xs">Oct 20, 2025</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Initial configuration and inventory tagging completed</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

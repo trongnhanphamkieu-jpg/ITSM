@@ -1,0 +1,94 @@
+services:
+  # ── Frontend ──────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+      - NEXT_PUBLIC_APP_NAME=ITMS
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+    networks:
+      - itms-network
+
+  # ── Backend ───────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/itms
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=itms-dev-secret-key-change-in-production
+      - JWT_ACCESS_TTL=8h
+      - JWT_REFRESH_TTL=7d
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=itms-files
+      - MINIO_USE_SSL=false
+      - LOG_RETENTION_MONTHS=12
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    volumes:
+      - ./backend/src:/app/src
+    networks:
+      - itms-network
+
+  # ── Database ──────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: itms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - itms-network
+
+  # ── Cache & Queue ─────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - itms-network
+
+  # ── File Storage ──────────────────────────────
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    networks:
+      - itms-network
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  itms-network:
+    driver: bridge

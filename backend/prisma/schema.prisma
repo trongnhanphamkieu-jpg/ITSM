@@ -1,0 +1,811 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Module: Authentication & Users ──
+
+enum UserRole {
+  admin
+  manager
+  staff
+  finance
+  viewer
+}
+
+enum UserStatus {
+  active
+  locked
+  inactive
+}
+
+model User {
+  id             String     @id @default(uuid()) @db.Uuid
+  fullName       String     @map("full_name") @db.VarChar(255)
+  email          String     @unique @db.VarChar(255)
+  passwordHash   String     @map("password_hash") @db.VarChar(255)
+  role           UserRole   @default(staff)
+  status         UserStatus @default(active)
+  twoFaSecret    String?    @map("two_fa_secret") @db.VarChar(255)
+  twoFaEnabled   Boolean    @default(false) @map("two_fa_enabled")
+  department     String?    @db.VarChar(100)
+  phone          String?    @db.VarChar(20)
+  avatarUrl      String?    @map("avatar_url") @db.VarChar(500)
+  lastLoginAt    DateTime?  @map("last_login_at")
+  failedAttempts Int        @default(0) @map("failed_attempts")
+  lockedUntil    DateTime?  @map("locked_until")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  auditLogs      AuditLog[]
+  createdPlans   BudgetPlan[] @relation("CreatedPlans")
+  approvedPlans  BudgetPlan[] @relation("ApprovedPlans")
+  createdCosts   ActualCost[] @relation("CreatedCosts")
+  createdVendors Vendor[]     @relation("CreatedVendors")
+  createdContracts Contract[] @relation("CreatedContracts")
+  uploadedAttachments ContractAttachment[] @relation("UploadedAttachments")
+  notifications  Notification[] @relation("UserNotifications")
+  createdEmails  EmailAccount[]     @relation("CreatedEmails")
+  createdDomains Domain[]           @relation("CreatedDomains")
+  createdVps     VpsServer[]        @relation("CreatedVps")
+  createdLicenses SoftwareLicense[] @relation("CreatedLicenses")
+  createdSsl     SslCertificate[]   @relation("CreatedSsl")
+  createdHardware HardwareAsset[]   @relation("CreatedHardware")
+  createdInfra    InfraResource[]   @relation("CreatedInfra")
+  createdIps      IpAddress[]       @relation("CreatedIps")
+  createdVehicles Vehicle[]         @relation("CreatedVehicles")
+  createdVehicleCosts VehicleVariableCost[] @relation("CreatedVehicleCosts")
+  createdSubscriptions VehicleServiceSubscription[] @relation("CreatedSubscriptions")
+  createdProjects Project[]         @relation("CreatedProjects")
+  createdForecasts CostForecast[]   @relation("CreatedForecasts")
+  approvedForecasts CostForecast[]  @relation("ApprovedForecasts")
+  forecastHistory CostForecastHistory[] @relation("ForecastHistoryPerformer")
+  createdForecastItems CostForecastItem[] @relation("CreatedForecastItems")
+
+  @@map("users")
+}
+
+// ── Module: Audit Log ──
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  module     String   @db.VarChar(50)
+  action     String   @db.VarChar(20)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id") @db.Uuid
+  oldData    Json?    @map("old_data")
+  newData    Json?    @map("new_data")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([module, action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ── Module: Budget Planning ──
+
+enum BudgetStatus {
+  draft
+  pending
+  approved
+  rejected
+}
+
+model BudgetPlan {
+  id            String       @id @default(uuid()) @db.Uuid
+  code          String       @unique @db.VarChar(20)
+  name          String       @db.VarChar(255)
+  year          Int
+  quarter       Int?
+  description   String?      @db.Text
+  totalAmount   Decimal      @default(0) @map("total_amount") @db.Decimal(15, 0)
+  status        BudgetStatus @default(draft)
+  rejectionNote String?      @map("rejection_note") @db.Text
+  createdById   String       @map("created_by") @db.Uuid
+  approvedById  String?      @map("approved_by") @db.Uuid
+  approvedAt    DateTime?    @map("approved_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  createdBy  User            @relation("CreatedPlans", fields: [createdById], references: [id])
+  approvedBy User?           @relation("ApprovedPlans", fields: [approvedById], references: [id])
+  categories BudgetCategory[]
+
+  @@index([year, status])
+  @@index([createdById])
+  @@map("budget_plans")
+}
+
+model BudgetCategory {
+  id       String @id @default(uuid()) @db.Uuid
+  planId   String @map("plan_id") @db.Uuid
+  name     String @db.VarChar(255)
+  sortOrder Int   @default(0) @map("sort_order")
+
+  plan  BudgetPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  items BudgetItem[]
+
+  @@index([planId])
+  @@map("budget_categories")
+}
+
+model BudgetItem {
+  id          String  @id @default(uuid()) @db.Uuid
+  categoryId  String  @map("category_id") @db.Uuid
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  unit        String? @db.VarChar(50)
+  quantity    Int     @default(1)
+  unitPrice   Decimal @default(0) @map("unit_price") @db.Decimal(15, 0)
+  totalPrice  Decimal @default(0) @map("total_price") @db.Decimal(15, 0)
+  note        String? @db.Text
+  sortOrder   Int     @default(0) @map("sort_order")
+  projectId   String? @map("project_id") @db.Uuid
+
+  category    BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  project     Project?       @relation(fields: [projectId], references: [id])
+  actualCosts ActualCost[]
+
+  @@index([categoryId])
+  @@index([projectId])
+  @@map("budget_items")
+}
+
+// ── Module: Cost Management ──
+
+model ActualCost {
+  id           String    @id @default(uuid()) @db.Uuid
+  budgetItemId String?   @map("budget_item_id") @db.Uuid
+  categoryName String    @map("category_name") @db.VarChar(255)
+  description  String    @db.Text
+  amount       Decimal   @db.Decimal(15, 0)
+  costDate     DateTime  @map("cost_date") @db.Date
+  vendor       String?   @db.VarChar(255)
+  invoiceNo    String?   @map("invoice_no") @db.VarChar(100)
+  note         String?   @db.Text
+  createdById  String    @map("created_by") @db.Uuid
+  projectId    String?   @map("project_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  budgetItem BudgetItem? @relation(fields: [budgetItemId], references: [id])
+  createdBy  User        @relation("CreatedCosts", fields: [createdById], references: [id])
+  project    Project?    @relation(fields: [projectId], references: [id])
+
+  @@index([costDate])
+  @@index([budgetItemId])
+  @@index([createdById])
+  @@index([categoryName])
+  @@index([projectId])
+  @@map("actual_costs")
+}
+
+// ── Module: Project Budget ──
+
+enum ProjectStatus {
+  active
+  closed
+}
+
+model Project {
+  id          String        @id @default(uuid()) @db.Uuid
+  code        String        @unique @db.VarChar(50)
+  name        String        @db.VarChar(255)
+  description String?       @db.Text
+  startDate   DateTime?     @map("start_date") @db.Date
+  endDate     DateTime?     @map("end_date") @db.Date
+  department  String?       @db.VarChar(100)
+  status      ProjectStatus @default(active)
+  notes       String?       @db.Text
+  createdById String        @map("created_by") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  createdBy   User          @relation("CreatedProjects", fields: [createdById], references: [id])
+  budgetItems BudgetItem[]
+  actualCosts ActualCost[]
+  forecastItems CostForecastItem[]
+
+  @@index([status])
+  @@index([createdById])
+  @@map("projects")
+}
+
+// ── Module: Vendor & Contract Management ──
+
+enum VendorStatus {
+  active
+  inactive
+}
+
+model Vendor {
+  id           String       @id @default(uuid()) @db.Uuid
+  code         String       @unique @db.VarChar(20)
+  name         String       @db.VarChar(255)
+  taxCode      String?      @map("tax_code") @db.VarChar(20)
+  email        String?      @db.VarChar(255)
+  phone        String?      @db.VarChar(20)
+  address      String?      @db.Text
+  contactName  String?      @map("contact_name") @db.VarChar(255)
+  contactPhone String?      @map("contact_phone") @db.VarChar(20)
+  contactEmail String?      @map("contact_email") @db.VarChar(255)
+  bankName     String?      @map("bank_name") @db.VarChar(255)
+  bankAccount  String?      @map("bank_account") @db.VarChar(50)
+  bankBranch   String?      @map("bank_branch") @db.VarChar(255)
+  status       VendorStatus @default(active)
+  note         String?      @db.Text
+  createdById  String       @map("created_by") @db.Uuid
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  createdBy User       @relation("CreatedVendors", fields: [createdById], references: [id])
+  contracts Contract[]
+  emailAccounts    EmailAccount[]     @relation("VendorEmails")
+  domains          Domain[]           @relation("VendorDomains")
+  vpsServers       VpsServer[]        @relation("VendorVps")
+  softwareLicenses SoftwareLicense[]  @relation("VendorLicenses")
+  sslCertificates  SslCertificate[]   @relation("VendorSsl")
+  hardwareAssets   HardwareAsset[]    @relation("VendorHardware")
+  infraResources   InfraResource[]    @relation("VendorInfra")
+  vehicles         Vehicle[]          @relation("VendorVehicles")
+
+  @@index([status])
+  @@index([createdById])
+  @@map("vendors")
+}
+
+enum ContractStatus {
+  draft
+  active
+  expired
+  terminated
+}
+
+model Contract {
+  id          String         @id @default(uuid()) @db.Uuid
+  code        String         @unique @db.VarChar(30)
+  name        String         @db.VarChar(255)
+  vendorId    String         @map("vendor_id") @db.Uuid
+  startDate   DateTime       @map("start_date") @db.Date
+  endDate     DateTime       @map("end_date") @db.Date
+  value       Decimal        @default(0) @db.Decimal(15, 0)
+  status      ContractStatus @default(draft)
+  description String?        @db.Text
+  terms       String?        @db.Text
+  createdById String         @map("created_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  vendor      Vendor               @relation(fields: [vendorId], references: [id])
+  createdBy   User                 @relation("CreatedContracts", fields: [createdById], references: [id])
+  attachments ContractAttachment[]
+  emailAccounts    EmailAccount[]     @relation("ContractEmails")
+  domains          Domain[]           @relation("ContractDomains")
+  vpsServers       VpsServer[]        @relation("ContractVps")
+  softwareLicenses SoftwareLicense[]  @relation("ContractLicenses")
+  sslCertificates  SslCertificate[]   @relation("ContractSsl")
+  hardwareAssets   HardwareAsset[]    @relation("ContractHardware")
+
+  @@index([vendorId])
+  @@index([status])
+  @@index([endDate])
+  @@index([createdById])
+  @@map("contracts")
+}
+
+model ContractAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  contractId String   @map("contract_id") @db.Uuid
+  fileName   String   @map("file_name") @db.VarChar(255)
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  storageKey String   @map("storage_key") @db.VarChar(500)
+  uploadedById String @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation("UploadedAttachments", fields: [uploadedById], references: [id])
+
+  @@index([contractId])
+  @@map("contract_attachments")
+}
+
+// ── Module: Notifications ──
+
+enum NotificationType {
+  contract_expiry
+  budget_approval
+  system
+}
+
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType @default(system)
+  title     String           @db.VarChar(255)
+  message   String           @db.Text
+  entityType String?         @map("entity_type") @db.VarChar(50)
+  entityId  String?          @map("entity_id") @db.Uuid
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation("UserNotifications", fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ── Module: Soft Inventory ──
+
+enum SoftAssetStatus {
+  active
+  inactive
+  expired
+}
+
+enum LicenseType {
+  perpetual
+  subscription
+  trial
+  oem
+}
+
+enum SslType {
+  DV
+  OV
+  EV
+  wildcard
+}
+
+model EmailAccount {
+  id            String          @id @default(uuid()) @db.Uuid
+  email         String          @unique @db.VarChar(255)
+  provider      String          @db.VarChar(100)
+  quotaMb       Int             @default(5120) @map("quota_mb")
+  usedMb        Int             @default(0) @map("used_mb")
+  assignedTo    String?         @map("assigned_to") @db.VarChar(255)
+  status        SoftAssetStatus @default(active)
+  notes         String?         @db.Text
+  vendorId      String?         @map("vendor_id") @db.Uuid
+  contractId    String?         @map("contract_id") @db.Uuid
+  createdById   String          @map("created_by_id") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt     DateTime?       @map("deleted_at")
+
+  createdBy     User            @relation("CreatedEmails", fields: [createdById], references: [id])
+  vendor        Vendor?         @relation("VendorEmails", fields: [vendorId], references: [id])
+  contract      Contract?       @relation("ContractEmails", fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([provider])
+  @@map("email_accounts")
+}
+
+model Domain {
+  id               String          @id @default(uuid()) @db.Uuid
+  domain           String          @unique @db.VarChar(255)
+  registrar        String?         @db.VarChar(100)
+  nameservers      String?         @db.Text
+  registrationDate DateTime?       @map("registration_date")
+  expiryDate       DateTime?       @map("expiry_date")
+  autoRenew        Boolean         @default(false) @map("auto_renew")
+  status           SoftAssetStatus @default(active)
+  notes            String?         @db.Text
+  vendorId         String?         @map("vendor_id") @db.Uuid
+  contractId       String?         @map("contract_id") @db.Uuid
+  createdById      String          @map("created_by_id") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  deletedAt        DateTime?       @map("deleted_at")
+
+  createdBy        User            @relation("CreatedDomains", fields: [createdById], references: [id])
+  vendor           Vendor?         @relation("VendorDomains", fields: [vendorId], references: [id])
+  contract         Contract?       @relation("ContractDomains", fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([expiryDate])
+  @@map("domains")
+}
+
+model VpsServer {
+  id            String          @id @default(uuid()) @db.Uuid
+  hostname      String          @db.VarChar(255)
+  ipAddress     String?         @map("ip_address") @db.VarChar(45)
+  provider      String?         @db.VarChar(100)
+  os            String?         @db.VarChar(100)
+  cpu           String?         @db.VarChar(50)
+  ramGb         Int?            @map("ram_gb")
+  storageGb     Int?            @map("storage_gb")
+  location      String?         @db.VarChar(100)
+  expiryDate    DateTime?       @map("expiry_date")
+  status        SoftAssetStatus @default(active)
+  notes         String?         @db.Text
+  vendorId      String?         @map("vendor_id") @db.Uuid
+  contractId    String?         @map("contract_id") @db.Uuid
+  createdById   String          @map("created_by_id") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt     DateTime?       @map("deleted_at")
+
+  createdBy     User            @relation("CreatedVps", fields: [createdById], references: [id])
+  vendor        Vendor?         @relation("VendorVps", fields: [vendorId], references: [id])
+  contract      Contract?       @relation("ContractVps", fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([expiryDate])
+  @@map("vps_servers")
+}
+
+model SoftwareLicense {
+  id            String          @id @default(uuid()) @db.Uuid
+  name          String          @db.VarChar(255)
+  publisher     String?         @db.VarChar(255)
+  licenseKey    String?         @map("license_key") @db.VarChar(500)
+  licenseType   LicenseType     @default(subscription) @map("license_type")
+  seats         Int             @default(1)
+  usedSeats     Int             @default(0) @map("used_seats")
+  purchaseDate  DateTime?       @map("purchase_date")
+  expiryDate    DateTime?       @map("expiry_date")
+  cost          Decimal?        @db.Decimal(15, 2)
+  status        SoftAssetStatus @default(active)
+  notes         String?         @db.Text
+  vendorId      String?         @map("vendor_id") @db.Uuid
+  contractId    String?         @map("contract_id") @db.Uuid
+  createdById   String          @map("created_by_id") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt     DateTime?       @map("deleted_at")
+
+  createdBy     User            @relation("CreatedLicenses", fields: [createdById], references: [id])
+  vendor        Vendor?         @relation("VendorLicenses", fields: [vendorId], references: [id])
+  contract      Contract?       @relation("ContractLicenses", fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([expiryDate])
+  @@index([licenseType])
+  @@map("software_licenses")
+}
+
+model SslCertificate {
+  id            String          @id @default(uuid()) @db.Uuid
+  domain        String          @db.VarChar(255)
+  issuer        String?         @db.VarChar(255)
+  sslType       SslType         @default(DV) @map("ssl_type")
+  serialNumber  String?         @map("serial_number") @db.VarChar(255)
+  issuedDate    DateTime?       @map("issued_date")
+  expiryDate    DateTime?       @map("expiry_date")
+  autoRenew     Boolean         @default(false) @map("auto_renew")
+  status        SoftAssetStatus @default(active)
+  notes         String?         @db.Text
+  vendorId      String?         @map("vendor_id") @db.Uuid
+  contractId    String?         @map("contract_id") @db.Uuid
+  createdById   String          @map("created_by_id") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt     DateTime?       @map("deleted_at")
+
+  createdBy     User            @relation("CreatedSsl", fields: [createdById], references: [id])
+  vendor        Vendor?         @relation("VendorSsl", fields: [vendorId], references: [id])
+  contract      Contract?       @relation("ContractSsl", fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([expiryDate])
+  @@map("ssl_certificates")
+}
+
+// ── Module: Hard Inventory ──
+
+enum HardAssetStatus {
+  in_use
+  available
+  maintenance
+  disposed
+}
+
+enum InfraType {
+  switch
+  router
+  firewall
+  access_point
+  ups
+  pdu
+  cable_tray
+  rack
+  other
+}
+
+enum IpType {
+  static
+  dhcp
+  reserved
+}
+
+model HardwareAsset {
+  id             String          @id @default(uuid()) @db.Uuid
+  assetTag       String          @unique @map("asset_tag") @db.VarChar(50)
+  name           String          @db.VarChar(255)
+  category       String          @db.VarChar(100)
+  brand          String?         @db.VarChar(100)
+  model          String?         @db.VarChar(100)
+  serialNumber   String?         @map("serial_number") @db.VarChar(100)
+  specs          Json?           @db.JsonB
+  purchaseDate   DateTime?       @map("purchase_date")
+  warrantyExpiry DateTime?       @map("warranty_expiry")
+  location       String?         @db.VarChar(255)
+  assignedTo     String?         @map("assigned_to") @db.VarChar(255)
+  cost           Decimal?        @db.Decimal(15, 2)
+  status         HardAssetStatus @default(available)
+  notes          String?         @db.Text
+  vendorId       String?         @map("vendor_id") @db.Uuid
+  contractId     String?         @map("contract_id") @db.Uuid
+  createdById    String          @map("created_by_id") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  createdBy      User            @relation("CreatedHardware", fields: [createdById], references: [id])
+  vendor         Vendor?         @relation("VendorHardware", fields: [vendorId], references: [id])
+  contract       Contract?       @relation("ContractHardware", fields: [contractId], references: [id])
+
+  @@index([status])
+  @@index([category])
+  @@index([warrantyExpiry])
+  @@map("hardware_assets")
+}
+
+model InfraResource {
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String          @db.VarChar(255)
+  infraType      InfraType       @default(other) @map("infra_type")
+  brand          String?         @db.VarChar(100)
+  model          String?         @db.VarChar(100)
+  serialNumber   String?         @map("serial_number") @db.VarChar(100)
+  location       String?         @db.VarChar(255)
+  rackUnit       String?         @map("rack_unit") @db.VarChar(20)
+  specs          Json?           @db.JsonB
+  ipAddress      String?         @map("ip_address") @db.VarChar(45)
+  managementUrl  String?         @map("management_url") @db.VarChar(500)
+  status         HardAssetStatus @default(available)
+  notes          String?         @db.Text
+  vendorId       String?         @map("vendor_id") @db.Uuid
+  createdById    String          @map("created_by_id") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  createdBy      User            @relation("CreatedInfra", fields: [createdById], references: [id])
+  vendor         Vendor?         @relation("VendorInfra", fields: [vendorId], references: [id])
+
+  @@index([infraType])
+  @@index([status])
+  @@map("infra_resources")
+}
+
+model IpAddress {
+  id             String          @id @default(uuid()) @db.Uuid
+  address        String          @unique @db.VarChar(45)
+  subnet         String?         @db.VarChar(18)
+  gateway        String?         @db.VarChar(45)
+  vlan           String?         @db.VarChar(20)
+  ipType         IpType          @default(static) @map("ip_type")
+  assignedTo     String?         @map("assigned_to") @db.VarChar(255)
+  assignedType   String?         @map("assigned_type") @db.VarChar(50)
+  status         HardAssetStatus @default(available)
+  notes          String?         @db.Text
+  createdById    String          @map("created_by_id") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  createdBy      User            @relation("CreatedIps", fields: [createdById], references: [id])
+
+  @@index([vlan])
+  @@index([status])
+  @@index([ipType])
+  @@map("ip_addresses")
+}
+
+// ── Module: Vehicle Cost Management ──
+
+enum VehicleStatus {
+  active
+  maintenance
+  disposed
+}
+
+enum CostFrequency {
+  monthly
+  quarterly
+  yearly
+  one_time
+}
+
+model Vehicle {
+  id             String         @id @default(uuid()) @db.Uuid
+  licensePlate   String         @unique @map("license_plate") @db.VarChar(20)
+  brand          String         @db.VarChar(100)
+  model          String         @db.VarChar(100)
+  year           Int?
+  type           String?        @db.VarChar(50)
+  fuelType       String?        @map("fuel_type") @db.VarChar(30)
+  color          String?        @db.VarChar(30)
+  vin            String?        @db.VarChar(50)
+  mileage        Int?           @default(0)
+  status         VehicleStatus  @default(active)
+  assignedTo     String?        @map("assigned_to") @db.VarChar(255)
+  insuranceExpiry DateTime?     @map("insurance_expiry")
+  registrationExpiry DateTime?  @map("registration_expiry")
+  cost           Decimal?       @db.Decimal(15, 2)
+  notes          String?        @db.Text
+  vendorId       String?        @map("vendor_id") @db.Uuid
+  createdById    String         @map("created_by_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  createdBy      User           @relation("CreatedVehicles", fields: [createdById], references: [id])
+  vendor         Vendor?        @relation("VendorVehicles", fields: [vendorId], references: [id])
+  subscriptions  VehicleServiceSubscription[] @relation("VehicleSubscriptions")
+  variableCosts  VehicleVariableCost[] @relation("VehicleCosts")
+
+  @@index([status])
+  @@index([licensePlate])
+  @@map("vehicles")
+}
+
+model VehicleService {
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String         @db.VarChar(255)
+  description    String?        @db.Text
+  costType       String         @default("fixed") @map("cost_type") @db.VarChar(20)
+  frequency      CostFrequency  @default(monthly)
+  defaultCost    Decimal?       @map("default_cost") @db.Decimal(15, 2)
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  subscriptions  VehicleServiceSubscription[] @relation("ServiceSubscriptions")
+  variableCosts  VehicleVariableCost[] @relation("ServiceCosts")
+
+  @@map("vehicle_services")
+}
+
+model VehicleVariableCost {
+  id               String          @id @default(uuid()) @db.Uuid
+  vehicleId        String          @map("vehicle_id") @db.Uuid
+  serviceId        String          @map("service_id") @db.Uuid
+  amount           Decimal         @db.Decimal(15, 2)
+  date             DateTime        @db.Date
+  mileageAtService Int?            @map("mileage_at_service")
+  notes            String?         @db.Text
+  receiptUrl       String?         @map("receipt_url") @db.VarChar(500)
+  createdById      String          @map("created_by_id") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+
+  vehicle          Vehicle         @relation("VehicleCosts", fields: [vehicleId], references: [id])
+  service          VehicleService  @relation("ServiceCosts", fields: [serviceId], references: [id])
+  createdBy        User            @relation("CreatedVehicleCosts", fields: [createdById], references: [id])
+
+  @@index([vehicleId])
+  @@index([serviceId])
+  @@index([date])
+  @@map("vehicle_variable_costs")
+}
+
+model VehicleServiceSubscription {
+  id             String         @id @default(uuid()) @db.Uuid
+  vehicleId      String         @map("vehicle_id") @db.Uuid
+  serviceId      String         @map("service_id") @db.Uuid
+  monthlyCost    Decimal        @map("monthly_cost") @db.Decimal(15, 2)
+  startDate      DateTime       @map("start_date") @db.Date
+  endDate        DateTime?      @map("end_date") @db.Date
+  isActive       Boolean        @default(true) @map("is_active")
+  notes          String?        @db.Text
+  createdById    String         @map("created_by_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  vehicle        Vehicle        @relation("VehicleSubscriptions", fields: [vehicleId], references: [id])
+  service        VehicleService @relation("ServiceSubscriptions", fields: [serviceId], references: [id])
+  createdBy      User           @relation("CreatedSubscriptions", fields: [createdById], references: [id])
+
+  @@index([vehicleId])
+  @@index([serviceId])
+  @@index([isActive])
+  @@map("vehicle_service_subscriptions")
+}
+
+// ── Module: Cost Forecast ──
+
+enum ForecastStatus {
+  draft
+  pending
+  approved
+  rejected
+  closed
+}
+
+enum ForecastPriority {
+  critical
+  high
+  medium
+  low
+}
+
+model CostForecast {
+  id            String         @id @default(uuid()) @db.Uuid
+  year          Int
+  month         Int
+  name          String         @db.VarChar(255)
+  totalAmount   Decimal        @default(0) @map("total_amount") @db.Decimal(18, 2)
+  currency      String         @default("VND") @db.VarChar(10)
+  status        ForecastStatus @default(draft)
+  approvedById  String?        @map("approved_by") @db.Uuid
+  approvedAt    DateTime?      @map("approved_at")
+  rejectReason  String?        @map("reject_reason") @db.Text
+  notes         String?        @db.Text
+  createdById   String         @map("created_by") @db.Uuid
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  approvedBy    User?          @relation("ApprovedForecasts", fields: [approvedById], references: [id])
+  createdBy     User           @relation("CreatedForecasts", fields: [createdById], references: [id])
+  items         CostForecastItem[]
+  history       CostForecastHistory[]
+
+  @@unique([year, month])
+  @@index([status])
+  @@index([createdById])
+  @@map("cost_forecasts")
+}
+
+model CostForecastItem {
+  id              String           @id @default(uuid()) @db.Uuid
+  forecastId      String           @map("forecast_id") @db.Uuid
+  itemName        String           @map("item_name") @db.VarChar(255)
+  description     String?          @db.Text
+  estimatedAmount Decimal          @map("estimated_amount") @db.Decimal(18, 2)
+  vendor          String?          @db.VarChar(255)
+  projectId       String?          @map("project_id") @db.Uuid
+  priority        ForecastPriority @default(medium)
+  notes           String?          @db.Text
+  sortOrder       Int              @default(0) @map("sort_order")
+  createdById     String           @map("created_by") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  forecast        CostForecast     @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+  project         Project?         @relation(fields: [projectId], references: [id])
+  createdBy       User             @relation("CreatedForecastItems", fields: [createdById], references: [id])
+
+  @@index([forecastId])
+  @@index([projectId])
+  @@map("cost_forecast_items")
+}
+
+model CostForecastHistory {
+  id            String       @id @default(uuid()) @db.Uuid
+  forecastId    String       @map("forecast_id") @db.Uuid
+  action        String       @db.VarChar(50)
+  comment       String?      @db.Text
+  performedById String       @map("performed_by") @db.Uuid
+  performedAt   DateTime     @default(now()) @map("performed_at")
+
+  forecast      CostForecast @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+  performedBy   User         @relation("ForecastHistoryPerformer", fields: [performedById], references: [id])
+
+  @@index([forecastId])
+  @@map("cost_forecast_history")
+}

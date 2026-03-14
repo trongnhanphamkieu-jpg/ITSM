@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary": "#f2d00d",
+                "background-light": "#f8f8f5",
+                "background-dark": "#221f10",
+              },
+              fontFamily: {
+                "display": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+            },
+          },
+        }
+    </script>
+<title>ITMS Login - Hai Van+</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<div class="flex-grow flex items-center justify-center px-4 py-12">
+<div class="w-full max-w-md">
+<!-- Card Container -->
+<div class="bg-white dark:bg-slate-900/50 shadow-xl rounded-xl p-8 border border-slate-200/50 dark:border-slate-800/50">
+<!-- Logo & Header -->
+<div class="flex flex-col items-center mb-8">
+<div class="mb-6">
+<img alt="Hai Van+ Logo" class="h-12 w-auto object-contain" data-alt="Hai Van Plus professional corporate logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVM3g1FiXulnTpU-ilM1vxyQAOuy1akLY52KL-dqYFhdP4P7rVc4Lwmdxot7tl2TBmYKpsUqKzwpl4yz9UqRSjGmlTZ13nKSGFZUxWzl6X7GBK-ASNNpnYcnLaE310SoFpcQ0Wo6OiR7djNVr1X6BBRV6YgsLQtcVXxn_MYIqwfynbkq9HY6ipE5po_Y3pFc727Bn-VsKoyJfo7Gu8n41mgPSs_rOil6tg_2X5YkCepcFKjp-mfb6vSiAyIhP_U29vYcTUD2c_73m2"/>
+</div>
+<h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">ITMS Portal</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-2">Sign in to your account</p>
+</div>
+<!-- Login Form -->
+<form class="space-y-6">
+<!-- Email Field -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300" for="email">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">mail</span>
+<input class="w-full pl-10 pr-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" id="email" name="email" placeholder="name@company.com" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-slate-700 dark:text-slate-300" for="password">Password</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
+<input class="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" id="password" name="password" placeholder="••••••••" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" type="button">
+<span class="material-symbols-outlined text-xl">visibility</span>
+</button>
+</div>
+</div>
+<!-- Options Row -->
+<div class="flex items-center justify-between text-sm">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+<span class="text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">Remember me</span>
+</label>
+<a class="text-primary font-semibold hover:underline decoration-2 underline-offset-4" href="#">Forgot password?</a>
+</div>
+<!-- Submit Button -->
+<button class="w-full bg-primary hover:bg-primary/90 text-slate-900 font-bold py-3.5 rounded-lg shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" type="submit">
+                        Login
+                    </button>
+</form>
+<!-- Footer / Support -->
+<div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-4">
+<p class="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">shield</span>
+                        Secured by Hai Van IT Service
+                    </p>
+</div>
+</div>
+<!-- Helpful Links -->
+<div class="mt-8 flex justify-center gap-6 text-xs text-slate-500 dark:text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Help Center</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f2d00d",
+                        "background-light": "#f8f8f5",
+                        "background-dark": "#221f10",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<title>ITMS Budget Planning</title>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 flex-shrink-0 bg-background-dark text-slate-100 flex flex-col border-r border-primary/10">
+<div class="p-6 flex items-center gap-3">
+<div class="size-10 rounded-lg bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-background-dark font-bold">account_balance_wallet</span>
+</div>
+<div>
+<h1 class="text-lg font-bold leading-tight">ITMS</h1>
+<p class="text-xs text-slate-400 font-medium">Enterprise Resource</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary text-background-dark font-semibold" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-sm">Budget Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-medium">Expenses</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart_4_bars</span>
+<span class="text-sm font-medium">Reports</span>
+</a>
+<div class="pt-4 pb-2 px-3 text-[10px] uppercase tracking-wider text-slate-500 font-bold">Administration</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="p-4 border-t border-white/10">
+<div class="flex items-center gap-3 p-2">
+<div class="size-8 rounded-full bg-slate-700 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User profile avatar of a professional" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsG5zcLPZSCEMJu92he7nE1qsVhMoVcl876AfAI0-kkI2yNsZv2mje02jXumXV6ONCB9QeRpaEua_BhDK4_GV_vHA8CNvPSOHK47zzppJSswLsNc0XHZjbdyZMRQgOYYFpZwhEIGH4QaUCuw0F8rWjacwKYyySdzEWUbxEJlUkJcLQJnf2ck_fdKAOmNFu90K1GfgN5ctEpTYv-CNjhXAwhfqkkCIvJpMbc-td53KJZH4QB2UGnGaNCKAL5TL9pAfVWKPAwdJCzL83"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-semibold truncate">Alex Henderson</p>
+<p class="text-[10px] text-slate-500 truncate">Financial Admin</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 text-sm">logout</span>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Header Section -->
+<header class="bg-white dark:bg-background-dark border-b border-slate-200 dark:border-white/10 p-6">
+<div class="max-w-7xl mx-auto">
+<div class="flex flex-wrap gap-2 mb-2">
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Home</a>
+<span class="text-slate-300 dark:text-slate-600 text-sm">/</span>
+<span class="text-slate-900 dark:text-slate-100 text-sm font-semibold">Budget</span>
+</div>
+<div class="flex items-center justify-between gap-4">
+<h2 class="text-3xl font-bold tracking-tight">Budget Planning</h2>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 border-2 border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined text-lg">upload_file</span>
+                                Import
+                            </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-background-dark text-sm font-bold rounded-lg hover:shadow-lg hover:shadow-primary/20 transition-all">
+<span class="material-symbols-outlined text-lg">add</span>
+                                Create Plan
+                            </button>
+</div>
+</div>
+</div>
+</header>
+<!-- Table & Filters Container -->
+<div class="flex-1 overflow-auto p-6">
+<div class="max-w-7xl mx-auto space-y-4">
+<!-- Filters Bar -->
+<div class="bg-white dark:bg-background-dark p-4 rounded-xl border border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-4">
+<div class="flex flex-1 min-w-[300px] items-center bg-slate-100 dark:bg-white/5 px-3 py-2 rounded-lg border border-transparent focus-within:border-primary/50 transition-all">
+<span class="material-symbols-outlined text-slate-400">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400" placeholder="Search budget plans..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<button class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-white/5 rounded-lg text-sm font-medium border border-transparent hover:border-slate-300 transition-all">
+                                    Year: 2024
+                                    <span class="material-symbols-outlined text-lg text-slate-400">expand_more</span>
+</button>
+</div>
+<div class="relative">
+<button class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-white/5 rounded-lg text-sm font-medium border border-transparent hover:border-slate-300 transition-all">
+                                    Status: All
+                                    <span class="material-symbols-outlined text-lg text-slate-400">expand_more</span>
+</button>
+</div>
+<div class="h-6 w-px bg-slate-200 dark:bg-white/10 mx-1"></div>
+<button class="p-2 text-slate-500 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-white dark:bg-background-dark rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
+<th class="px-6 py-4">Plan Code</th>
+<th class="px-6 py-4">Fiscal Year</th>
+<th class="px-6 py-4 text-right">Total Budget</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Owner</th>
+<th class="px-6 py-4">Updated At</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-white/5">
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-sm font-bold text-primary">BP-2024-001</td>
+<td class="px-6 py-4 text-sm">FY2024</td>
+<td class="px-6 py-4 text-sm text-right font-mono">$1,240,000.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+<span class="size-1.5 rounded-full bg-green-500"></span>
+                                            Approved
+                                        </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-sm">
+<div class="size-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">JD</div>
+                                            Jane Doe
+                                        </div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">Oct 12, 2023</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-sm font-bold text-primary">BP-2024-002</td>
+<td class="px-6 py-4 text-sm">FY2024</td>
+<td class="px-6 py-4 text-sm text-right font-mono">$850,000.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+<span class="size-1.5 rounded-full bg-amber-500"></span>
+                                            Pending
+                                        </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-sm">
+<div class="size-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">ML</div>
+                                            Mark Lewis
+                                        </div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">Oct 14, 2023</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-sm font-bold text-primary">BP-2025-001</td>
+<td class="px-6 py-4 text-sm">FY2025</td>
+<td class="px-6 py-4 text-sm text-right font-mono">$2,100,000.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-400">
+<span class="size-1.5 rounded-full bg-slate-400"></span>
+                                            Draft
+                                        </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-sm">
+<div class="size-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">AH</div>
+                                            Alex Henderson
+                                        </div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">Oct 18, 2023</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-sm font-bold text-primary">BP-2023-098</td>
+<td class="px-6 py-4 text-sm">FY2023</td>
+<td class="px-6 py-4 text-sm text-right font-mono">$945,000.00</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+<span class="size-1.5 rounded-full bg-green-500"></span>
+                                            Approved
+                                        </span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 text-sm">
+<div class="size-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">SC</div>
+                                            Sarah Chen
+                                        </div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500">Sep 28, 2023</td>
+<td class="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="px-6 py-4 bg-slate-50 dark:bg-white/5 flex items-center justify-between border-t border-slate-200 dark:border-white/10">
+<p class="text-sm text-slate-500">Showing <span class="font-semibold text-slate-900 dark:text-slate-100">1</span> to <span class="font-semibold text-slate-900 dark:text-slate-100">4</span> of <span class="font-semibold text-slate-900 dark:text-slate-100">24</span> plans</p>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 text-sm font-medium border border-slate-300 dark:border-white/20 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 disabled:opacity-50" disabled="">Previous</button>
+<div class="flex items-center">
+<button class="size-9 bg-primary text-background-dark font-bold rounded-lg text-sm">1</button>
+<button class="size-9 text-sm font-medium text-slate-500 hover:text-primary">2</button>
+<button class="size-9 text-sm font-medium text-slate-500 hover:text-primary">3</button>
+<span class="px-2 text-slate-400">...</span>
+<button class="size-9 text-sm font-medium text-slate-500 hover:text-primary">6</button>
+</div>
+<button class="px-3 py-1.5 text-sm font-medium border border-slate-300 dark:border-white/20 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5">Next</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
