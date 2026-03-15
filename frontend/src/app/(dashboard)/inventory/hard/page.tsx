@@ -6,6 +6,7 @@ import { VendorSelect } from "@/components/shared/vendor-select";
 import { ContractSelect } from "@/components/shared/contract-select";
 import { UserSelect } from "@/components/shared/user-select";
 import { ExportButton } from "@/components/shared/export-button";
+import { MasterDataSelect } from "@/components/shared";
 
 type TabKey = "hardware" | "infra" | "ip";
 
@@ -15,7 +16,7 @@ interface TabConfig {
   icon: string;
   endpoint: string;
   columns: { key: string; label: string; render?: (item: any) => string }[];
-  createFields: { key: string; label: string; type: string; required?: boolean; options?: { value: string; label: string }[] }[];
+  createFields: { key: string; label: string; type: string; required?: boolean; options?: { value: string; label: string }[]; masterDataType?: string }[];
 }
 
 const TABS: TabConfig[] = [
@@ -38,22 +39,13 @@ const TABS: TabConfig[] = [
     createFields: [
       { key: "assetTag", label: "Mã tài sản", type: "text", required: true },
       { key: "name", label: "Tên thiết bị", type: "text", required: true },
-      { key: "category", label: "Danh mục", type: "select", required: true, options: [
-        { value: "laptop", label: "Laptop" },
-        { value: "desktop", label: "Desktop" },
-        { value: "monitor", label: "Màn hình" },
-        { value: "printer", label: "Máy in" },
-        { value: "phone", label: "Điện thoại" },
-        { value: "tablet", label: "Tablet" },
-        { value: "peripheral", label: "Phụ kiện" },
-        { value: "other", label: "Khác" },
-      ]},
+      { key: "category", label: "Danh mục", type: "master-data", required: true, masterDataType: "hardware_category" },
       { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
       { key: "contractId", label: "Hợp đồng", type: "contract-select" },
       { key: "brand", label: "Thương hiệu", type: "text" },
       { key: "model", label: "Model", type: "text" },
       { key: "serialNumber", label: "Số serial", type: "text" },
-      { key: "location", label: "Vị trí", type: "text" },
+      { key: "location", label: "Vị trí", type: "master-data", masterDataType: "location" },
       { key: "assignedTo", label: "Gán cho", type: "user-select" },
       { key: "cost", label: "Giá trị (VND)", type: "number" },
       { key: "notes", label: "Ghi chú", type: "textarea" },
@@ -76,22 +68,12 @@ const TABS: TabConfig[] = [
     ],
     createFields: [
       { key: "name", label: "Tên thiết bị", type: "text", required: true },
-      { key: "infraType", label: "Loại", type: "select", required: true, options: [
-        { value: "switch", label: "Switch" },
-        { value: "router", label: "Router" },
-        { value: "firewall", label: "Firewall" },
-        { value: "access_point", label: "Access Point" },
-        { value: "ups", label: "UPS" },
-        { value: "pdu", label: "PDU" },
-        { value: "rack", label: "Tủ Rack" },
-        { value: "cable_tray", label: "Máng cáp" },
-        { value: "other", label: "Khác" },
-      ]},
+      { key: "infraType", label: "Loại", type: "master-data", required: true, masterDataType: "infra_type" },
       { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
       { key: "brand", label: "Thương hiệu", type: "text" },
       { key: "model", label: "Model", type: "text" },
       { key: "serialNumber", label: "Serial", type: "text" },
-      { key: "location", label: "Vị trí", type: "text" },
+      { key: "location", label: "Vị trí", type: "master-data", masterDataType: "location" },
       { key: "rackUnit", label: "Rack/U", type: "text" },
       { key: "ipAddress", label: "IP", type: "text" },
       { key: "managementUrl", label: "URL quản trị", type: "text" },
@@ -386,6 +368,13 @@ export default function HardInventoryPage() {
                     <UserSelect
                       value={formData[field.key] || ""}
                       onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                    />
+                  ) : field.type === "master-data" ? (
+                    <MasterDataSelect
+                      type={field.masterDataType || field.key}
+                      value={formData[field.key] || ""}
+                      onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                      placeholder={`Chọn ${field.label.toLowerCase()}`}
                     />
                   ) : field.type === "select" ? (
                     <select
