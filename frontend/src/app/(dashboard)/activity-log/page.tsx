@@ -2,6 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
+import { useI18n } from "@/lib/i18n";
+
+const LOG_COLUMNS: ExportColumn[] = [
+  { header: "Thời gian", key: "createdAt", format: (v: string) => v ? new Date(v).toLocaleString("vi-VN") : "" },
+  { header: "Người dùng", key: "user", format: (_: any, r: any) => r.user?.fullName || "" },
+  { header: "Email", key: "email", format: (_: any, r: any) => r.user?.email || "" },
+  { header: "Module", key: "module" },
+  { header: "Thao tác", key: "action" },
+  { header: "Đối tượng", key: "entityType" },
+  { header: "IP", key: "ipAddress" },
+];
+
 
 interface LogEntry {
   id: string;
@@ -18,43 +32,46 @@ interface LogEntry {
   user: { id: string; fullName: string; email: string; role: string };
 }
 
-const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  create: { label: "Tạo mới", color: "bg-emerald-500/20 text-emerald-400" },
-  update: { label: "Cập nhật", color: "bg-amber-500/20 text-amber-400" },
-  delete: { label: "Xoá", color: "bg-red-500/20 text-red-400" },
-  login: { label: "Đăng nhập", color: "bg-blue-500/20 text-blue-400" },
-  approve: { label: "Duyệt", color: "bg-emerald-500/20 text-emerald-400" },
-  reject: { label: "Từ chối", color: "bg-red-500/20 text-red-400" },
-  submit: { label: "Gửi duyệt", color: "bg-yellow-500/20 text-yellow-400" },
-};
-
-const MODULE_LABELS: Record<string, string> = {
-  budget: "Ngân sách",
-  cost: "Chi phí",
-  vendors: "NCC",
-  contracts: "Hợp đồng",
-  vehicles: "Phương tiện",
-  projects: "Dự án",
-  cost_forecasts: "Dự chi",
-  users: "Người dùng",
-  auth: "Xác thực",
-  emails: "Email",
-  domains: "Domain",
-  vps: "VPS",
-  licenses: "Phần mềm",
-  certificates: "SSL",
-  hardware: "Phần cứng",
-  infra: "Hạ tầng",
-};
-
-function fmt(d: string) {
-  return new Date(d).toLocaleString("vi-VN", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
+// Locale-aware labels defined inside component below
 
 export default function ActivityLogPage() {
+  const { t, locale } = useI18n();
+
+  function fmt(d: string) {
+    return new Date(d).toLocaleString(locale === "en" ? "en-US" : "vi-VN", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  const ACTION_LABELS: Record<string, { label: string; color: string }> = {
+    create: { label: locale === "en" ? "Create" : "Tạo mới", color: "bg-emerald-500/20 text-emerald-400" },
+    update: { label: locale === "en" ? "Update" : "Cập nhật", color: "bg-amber-500/20 text-amber-400" },
+    delete: { label: locale === "en" ? "Delete" : "Xoá", color: "bg-red-500/20 text-red-400" },
+    login: { label: locale === "en" ? "Login" : "Đăng nhập", color: "bg-blue-500/20 text-blue-400" },
+    approve: { label: locale === "en" ? "Approve" : "Duyệt", color: "bg-emerald-500/20 text-emerald-400" },
+    reject: { label: locale === "en" ? "Reject" : "Từ chối", color: "bg-red-500/20 text-red-400" },
+    submit: { label: locale === "en" ? "Submit" : "Gửi duyệt", color: "bg-yellow-500/20 text-yellow-400" },
+  };
+
+  const MODULE_LABELS: Record<string, string> = {
+    budget: locale === "en" ? "Budget" : "Ngân sách",
+    cost: locale === "en" ? "Cost" : "Chi phí",
+    vendors: locale === "en" ? "Vendors" : "NCC",
+    contracts: locale === "en" ? "Contracts" : "Hợp đồng",
+    vehicles: locale === "en" ? "Vehicles" : "Phương tiện",
+    projects: locale === "en" ? "Projects" : "Dự án",
+    cost_forecasts: locale === "en" ? "Forecasts" : "Dự chi",
+    users: locale === "en" ? "Users" : "Người dùng",
+    auth: locale === "en" ? "Auth" : "Xác thực",
+    emails: "Email",
+    domains: "Domain",
+    vps: "VPS",
+    licenses: locale === "en" ? "Software" : "Phần mềm",
+    certificates: "SSL",
+    hardware: locale === "en" ? "Hardware" : "Phần cứng",
+    infra: locale === "en" ? "Infrastructure" : "Hạ tầng",
+  };
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -113,28 +130,29 @@ export default function ActivityLogPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">📋 Nhật ký hoạt động</h1>
-          <p className="text-sm text-muted-foreground mt-1">Theo dõi lịch sử thao tác và thay đổi dữ liệu</p>
+          <h1 className="text-2xl font-bold text-foreground">📋 {t("activity.title")}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t("activity.desc")}</p>
         </div>
+        <ExportButton data={logs} columns={LOG_COLUMNS} filename="nhat_ky" />
       </div>
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-xs text-muted-foreground font-semibold uppercase">Tổng logs</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{stats.totalLogs?.toLocaleString("vi-VN")}</p>
+            <p className="text-xs text-muted-foreground font-semibold uppercase">{t("activity.total_logs")}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{stats.totalLogs?.toLocaleString(locale === "en" ? "en-US" : "vi-VN")}</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-xs text-muted-foreground font-semibold uppercase">Module phổ biến</p>
+            <p className="text-xs text-muted-foreground font-semibold uppercase">{t("activity.popular_module")}</p>
             <p className="text-lg font-bold text-amber-400 mt-1">{MODULE_LABELS[stats.byModule?.[0]?.module] || stats.byModule?.[0]?.module || "—"}</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-xs text-muted-foreground font-semibold uppercase">Thao tác nhiều nhất</p>
+            <p className="text-xs text-muted-foreground font-semibold uppercase">{t("activity.most_action")}</p>
             <p className="text-lg font-bold text-emerald-400 mt-1">{ACTION_LABELS[stats.byAction?.[0]?.action]?.label || stats.byAction?.[0]?.action || "—"}</p>
           </div>
           <div className="bg-card rounded-xl border border-border p-4">
-            <p className="text-xs text-muted-foreground font-semibold uppercase">Người dùng gần đây</p>
+            <p className="text-xs text-muted-foreground font-semibold uppercase">{t("activity.recent_user")}</p>
             <p className="text-lg font-bold text-primary mt-1">{stats.recentUsers?.[0]?.fullName || "—"}</p>
           </div>
         </div>
@@ -143,31 +161,31 @@ export default function ActivityLogPage() {
       {/* Tabs */}
       <div className="flex gap-1 bg-card rounded-lg border border-border p-1 w-fit">
         <button onClick={() => { setActiveTab("all"); setPage(1); }} className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-          Tất cả
+          {t("activity.all_time")}
         </button>
         <button onClick={() => { setActiveTab("my"); setPage(1); }} className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "my" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-          Lịch sử tôi
+          {t("activity.my_history")}
         </button>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <input
-          type="text" placeholder="Tìm kiếm..." value={search}
+          type="text" placeholder={t("common.search")} value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-card border border-border rounded-lg text-sm w-48"
         />
         <select value={filterModule} onChange={(e) => { setFilterModule(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-card border border-border rounded-lg text-sm">
-          <option value="">Tất cả module</option>
+          <option value="">{t("activity.all_modules")}</option>
           {modules.map((m) => <option key={m} value={m}>{MODULE_LABELS[m] || m}</option>)}
         </select>
         <select value={filterAction} onChange={(e) => { setFilterAction(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-card border border-border rounded-lg text-sm">
-          <option value="">Tất cả thao tác</option>
-          <option value="create">Tạo mới</option>
-          <option value="update">Cập nhật</option>
-          <option value="delete">Xoá</option>
+          <option value="">{t("activity.all_actions")}</option>
+          <option value="create">{ACTION_LABELS.create.label}</option>
+          <option value="update">{ACTION_LABELS.update.label}</option>
+          <option value="delete">{ACTION_LABELS.delete.label}</option>
         </select>
         <input type="date" value={filterFrom} onChange={(e) => { setFilterFrom(e.target.value); setPage(1); }}
           className="px-3 py-2 bg-card border border-border rounded-lg text-sm" />
@@ -177,23 +195,23 @@ export default function ActivityLogPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center text-muted-foreground py-12">Đang tải...</div>
+        <div className="text-center text-muted-foreground py-12">{t("common.loading")}</div>
       ) : logs.length === 0 ? (
         <div className="text-center text-muted-foreground py-12 bg-card rounded-xl border border-border">
           <p className="text-4xl mb-2">📭</p>
-          <p>Chưa có nhật ký nào</p>
+          <p>{t("common.no_data")}</p>
         </div>
       ) : (
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">THỜI GIAN</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">NGƯỜI DÙNG</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">MODULE</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">THAO TÁC</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">ĐỐI TƯỢNG</th>
-                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">IP</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("activity.col_time")}</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("activity.col_user")}</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("activity.col_module")}</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("activity.col_action")}</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("activity.col_target")}</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground">{t("activity.col_ip")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -231,15 +249,15 @@ export default function ActivityLogPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">Trang {page} / {totalPages} ({total} bản ghi)</p>
+          <p className="text-sm text-muted-foreground">{locale === "en" ? `Page ${page} / ${totalPages} (${total} records)` : `Trang ${page} / ${totalPages} (${total} bản ghi)`}</p>
           <div className="flex gap-2">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}
               className="px-3 py-1.5 rounded-lg bg-card border border-border text-sm hover:bg-muted/50 disabled:opacity-40">
-              ← Trước
+              {locale === "en" ? "← Prev" : "← Trước"}
             </button>
             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
               className="px-3 py-1.5 rounded-lg bg-card border border-border text-sm hover:bg-muted/50 disabled:opacity-40">
-              Sau →
+              {locale === "en" ? "Next →" : "Sau →"}
             </button>
           </div>
         </div>

@@ -3,9 +3,22 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
+
+const PLAN_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: "Mã", key: "code" },
+  { header: "Tên kế hoạch", key: "name" },
+  { header: "Năm", key: "year" },
+  { header: "Tổng ngân sách", key: "totalAmount" },
+  { header: "Trạng thái", key: "status" },
+  { header: "Ngày tạo", key: "createdAt", format: (v: string) => v ? new Date(v).toLocaleDateString("vi-VN") : "" },
+];
+
 
 type BudgetStatus = "draft" | "pending" | "approved" | "rejected";
 
@@ -37,10 +50,6 @@ const STATUS_MAP: Record<
   approved: { label: "Đã duyệt", variant: "success" },
   rejected: { label: "Từ chối", variant: "danger" },
 };
-
-function formatCurrency(value: string | number) {
-  return new Intl.NumberFormat("vi-VN").format(Number(value)) + "₫";
-}
 
 export default function BudgetPlansPage() {
   const [plans, setPlans] = useState<BudgetPlan[]>([]);
@@ -91,13 +100,16 @@ export default function BudgetPlansPage() {
         title="Kế hoạch ngân sách"
         description="Quản lý và theo dõi các kế hoạch ngân sách CNTT"
         actions={
-          <Link
-            href="/budget/plans/create"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            <i className="bi bi-plus-lg" />
-            Tạo kế hoạch
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExportButton data={plans} columns={PLAN_EXPORT_COLUMNS} filename="ke_hoach_ngan_sach" />
+            <Link
+              href="/budget/plans/create"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            >
+              <i className="bi bi-plus-lg" />
+              Tạo kế hoạch
+            </Link>
+          </div>
         }
       />
 

@@ -112,4 +112,11 @@ export class BudgetController {
   ) {
     return this.budgetService.reject(id, req.user.id, dto.rejectionNote);
   }
+
+  @Post(':id/revert')
+  @Roles('admin', 'manager')
+  @ApiOperation({ summary: 'Đưa kế hoạch về trạng thái Nháp' })
+  revert(@Param('id') id: string) {
+    return this.budgetService.revertToDraft(id);
+  }
 }

@@ -3,6 +3,21 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
+import { useI18n } from "@/lib/i18n";
+
+const VENDOR_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: "Mã NCC", key: "code" },
+  { header: "Tên NCC", key: "name" },
+  { header: "MST", key: "taxCode" },
+  { header: "Email", key: "email" },
+  { header: "Điện thoại", key: "phone" },
+  { header: "Địa chỉ", key: "address" },
+  { header: "Trạng thái", key: "status" },
+  { header: "Số HĐ", key: "_count", format: (_: any, r: any) => String(r._count?.contracts || 0) },
+];
+
 
 interface Vendor {
   id: string;
@@ -19,6 +34,7 @@ interface Vendor {
 }
 
 export default function VendorsPage() {
+  const { t, locale } = useI18n();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -53,18 +69,21 @@ export default function VendorsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Nhà cung cấp</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("vendors.title")}</h1>
           <p className="mt-1 text-sm text-muted">
-            Quản lý danh sách nhà cung cấp và đối tác
+            {t("vendors.desc")}
           </p>
         </div>
-        <Link
-          href="/vendors/create"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-dark"
-        >
-          <i className="bi bi-plus-lg" />
-          Thêm NCC
-        </Link>
+        <div className="flex items-center gap-2">
+          <ExportButton data={vendors} columns={VENDOR_EXPORT_COLUMNS} filename="nha_cung_cap" />
+          <Link
+            href="/vendors/create"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-dark"
+          >
+            <i className="bi bi-plus-lg" />
+            {t("vendors.create")}
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}
@@ -73,7 +92,7 @@ export default function VendorsPage() {
           <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
-            placeholder="Tìm theo tên, mã, MST..."
+            placeholder={locale === "en" ? "Search by name, code, tax..." : "Tìm theo tên, mã, MST..."}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -90,9 +109,9 @@ export default function VendorsPage() {
           }}
           className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
         >
-          <option value="">Tất cả trạng thái</option>
-          <option value="active">Đang hoạt động</option>
-          <option value="inactive">Ngừng hoạt động</option>
+          <option value="">{locale === "en" ? "All statuses" : "Tất cả trạng thái"}</option>
+          <option value="active">{t("common.active")}</option>
+          <option value="inactive">{t("common.inactive")}</option>
         </select>
       </div>
 

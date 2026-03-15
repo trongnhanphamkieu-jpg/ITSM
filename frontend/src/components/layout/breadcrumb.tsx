@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/": "Dashboard",
-  "/budgets": "Kế hoạch ngân sách",
+  "/budget/plans": "Kế hoạch ngân sách",
   "/costs": "Chi phí thực tế",
   "/forecasts": "Dự chi",
   "/projects": "Ngân sách dự án",

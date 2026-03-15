@@ -3,7 +3,23 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
+import { VendorSelect } from "@/components/shared/vendor-select";
+import { CategorySelect } from "@/components/shared/category-select";
+import { CurrencyInput } from "@/components/shared/currency-input";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
+
+const COST_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: "Ngày", key: "costDate", format: (v: string) => v ? new Date(v).toLocaleDateString("vi-VN") : "" },
+  { header: "Danh mục", key: "categoryName" },
+  { header: "Mô tả", key: "description" },
+  { header: "Số tiền", key: "amount" },
+  { header: "Nhà cung cấp", key: "vendor" },
+  { header: "Số HĐ", key: "invoiceNo" },
+];
+
 
 interface ActualCost {
   id: string;
@@ -23,9 +39,7 @@ interface ApiResponse {
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
 
-function formatCurrency(value: string | number) {
-  return new Intl.NumberFormat("vi-VN").format(Number(value)) + "₫";
-}
+
 
 export default function CostListPage() {
   const [costs, setCosts] = useState<ActualCost[]>([]);
@@ -36,6 +50,9 @@ export default function CostListPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ categoryName: "", description: "", amount: 0, costDate: "", vendorId: "", invoiceNo: "", note: "" });
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchCosts = useCallback(async () => {
     setIsLoading(true);
@@ -97,13 +114,16 @@ export default function CostListPage() {
         title="Chi phí thực tế"
         description="Quản lý chi phí phát sinh và so sánh với ngân sách"
         actions={
-          <Link
-            href="/costs/create"
-            className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <i className="bi bi-plus-lg" />
-            Thêm chi phí
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExportButton data={costs} columns={COST_EXPORT_COLUMNS} filename="chi_phi_thuc_te" />
+            <Link
+              href="/costs/create"
+              className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <i className="bi bi-plus-lg" />
+              Thêm chi phí
+            </Link>
+          </div>
         }
       />
 
@@ -222,30 +242,126 @@ export default function CostListPage() {
                   <th className="px-6 py-3 text-left font-medium text-muted-foreground">
                     SỐ HĐ
                   </th>
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                    THAO TÁC
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
                 {costs.map((cost) => (
-                  <tr key={cost.id} className="hover:bg-muted/10">
+                  <tr key={cost.id} className={`hover:bg-muted/10 ${editingId === cost.id ? 'bg-primary/5' : ''}`}>
                     <td className="px-6 py-3 text-card-foreground whitespace-nowrap">
-                      {new Date(cost.costDate).toLocaleDateString("vi-VN")}
+                      {editingId === cost.id ? (
+                        <input
+                          type="date"
+                          value={editForm.costDate}
+                          onChange={(e) => setEditForm(f => ({ ...f, costDate: e.target.value }))}
+                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
+                        />
+                      ) : (
+                        new Date(cost.costDate).toLocaleDateString("vi-VN")
+                      )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-card-foreground">
-                        {cost.categoryName}
-                      </span>
+                      {editingId === cost.id ? (
+                        <input
+                          type="text"
+                          value={editForm.categoryName}
+                          onChange={(e) => setEditForm(f => ({ ...f, categoryName: e.target.value }))}
+                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
+                          placeholder="Danh mục"
+                        />
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-card-foreground">
+                          {cost.categoryName}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-card-foreground max-w-xs truncate">
-                      {cost.description}
+                    <td className="px-4 py-3 text-card-foreground max-w-xs">
+                      {editingId === cost.id ? (
+                        <input
+                          type="text"
+                          value={editForm.description}
+                          onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
+                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
+                          placeholder="Mô tả"
+                        />
+                      ) : (
+                        <span className="truncate block">{cost.description}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold text-primary whitespace-nowrap">
-                      {formatCurrency(cost.amount)}
+                      {editingId === cost.id ? (
+                        <input
+                          type="number"
+                          value={editForm.amount}
+                          onChange={(e) => setEditForm(f => ({ ...f, amount: Number(e.target.value) }))}
+                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm text-right outline-none focus:border-primary"
+                          placeholder="Số tiền"
+                        />
+                      ) : (
+                        formatCurrency(cost.amount)
+                      )}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {cost.vendor || "—"}
+                      {editingId === cost.id ? (
+                        <input
+                          type="text"
+                          value={editForm.vendorId}
+                          onChange={(e) => setEditForm(f => ({ ...f, vendorId: e.target.value }))}
+                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
+                          placeholder="Nhà cung cấp"
+                        />
+                      ) : (
+                        cost.vendor || "—"
+                      )}
                     </td>
                     <td className="px-6 py-3 text-muted-foreground">
-                      {cost.invoiceNo || "—"}
+                      {editingId === cost.id ? (
+                        <input
+                          type="text"
+                          value={editForm.invoiceNo}
+                          onChange={(e) => setEditForm(f => ({ ...f, invoiceNo: e.target.value }))}
+                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
+                          placeholder="Số HĐ"
+                        />
+                      ) : (
+                        cost.invoiceNo || "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {editingId === cost.id ? (
+                        <div className="flex items-center gap-1 justify-center">
+                          <button onClick={async () => {
+                            setEditSaving(true);
+                            try {
+                              await api.patch(`/actual-costs/${cost.id}`, editForm);
+                              setEditingId(null);
+                              fetchCosts();
+                            } catch {} finally { setEditSaving(false); }
+                          }} disabled={editSaving} className="rounded p-1 text-emerald-600 hover:bg-emerald-50"><i className="bi bi-check-lg" /></button>
+                          <button onClick={() => setEditingId(null)} className="rounded p-1 text-gray-400 hover:bg-gray-50"><i className="bi bi-x-lg" /></button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 justify-center">
+                          <button onClick={() => {
+                            setEditingId(cost.id);
+                            setEditForm({
+                              categoryName: cost.categoryName, description: cost.description,
+                              amount: Number(cost.amount), costDate: cost.costDate?.split("T")[0] || "",
+                              vendorId: "", invoiceNo: cost.invoiceNo || "", note: "",
+                            });
+                          }} className="rounded p-1 text-gray-400 hover:text-primary hover:bg-primary/5" title="Chỉnh sửa">
+                            <i className="bi bi-pencil" />
+                          </button>
+                          <button onClick={async () => {
+                            if (!confirm("Xóa chi phí này?")) return;
+                            try { await api.delete(`/actual-costs/${cost.id}`); fetchCosts(); } catch {}
+                          }} className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50" title="Xóa">
+                            <i className="bi bi-trash" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

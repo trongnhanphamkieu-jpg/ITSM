@@ -21,6 +21,7 @@ import { CostForecastModule } from './cost-forecast/cost-forecast.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { ReportModule } from './reports/report.module';
 import { AuditInterceptor } from './activity-log/audit.interceptor';
+import { CacheModule } from './cache/cache.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -31,6 +32,7 @@ import { HealthController } from './health.controller';
       { name: 'medium', ttl: 10000, limit: 20 },
       { name: 'long', ttl: 60000, limit: 100 },
     ]),
+    CacheModule,
     PrismaModule,
     AuthModule,
     UsersModule,

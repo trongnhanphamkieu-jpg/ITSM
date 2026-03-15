@@ -1,7 +1,7 @@
 # 📖 ITMS — Hướng dẫn Sử dụng Hệ thống
 
 > **IT Management System** — Hệ thống Quản lý Công nghệ Thông tin  
-> Phiên bản: 1.0 | Cập nhật: 14/03/2026
+> Phiên bản: 1.1 | Cập nhật: 15/03/2026
 
 ---
 
@@ -21,7 +21,8 @@
 12. [Báo cáo Tổng hợp](#12-báo-cáo-tổng-hợp)
 13. [Nhật ký Hoạt động](#13-nhật-ký-hoạt-động)
 14. [Quản trị Hệ thống](#14-quản-trị-hệ-thống)
-15. [Flows & Use Cases](#15-flows--use-cases)
+15. [Tính năng Nâng cao (v1.1)](#15-tính-năng-nâng-cao-v11)
+16. [Flows & Use Cases](#16-flows--use-cases)
 
 ---
 
@@ -94,10 +95,14 @@ ITMS là hệ thống quản lý tổng hợp dành cho bộ phận CNTT, cho ph
 | 5 | **Biểu đồ Budget vs Actual** | So sánh ngân sách và thực chi theo tháng (bar chart) |
 | 6 | **Thanh tiến trình chi tiêu** | Phần trăm ngân sách đã sử dụng |
 | 7 | **Hoạt động gần đây** | Danh sách 5 thao tác mới nhất trên hệ thống |
+| 8 | **Bộ lọc Thời gian** *(v1.1)* | Chuyển đổi Năm / Quý / Tháng để xem số liệu theo kỳ |
+| 9 | **Top 5 NCC** *(v1.1)* | Biểu đồ nhà cung cấp có chi phí cao nhất |
+| 10 | **Cảnh báo** *(v1.1)* | Cảnh báo hợp đồng/domain/SSL sắp hết hạn + vượt ngân sách |
 
 ### Thao tác
 
 - **Xem chi tiết biểu đồ**: Hover lên biểu đồ để xem số liệu cụ thể
+- **Chuyển kỳ xem**: Nhấn các nút Năm / Quý / Tháng trên Dashboard để lọc dữ liệu
 - **Chuyển trang**: Nhấn các mục trên Sidebar để điều hướng
 - **Thu gọn Sidebar**: Nhấn icon hamburger (☰) trên thanh header
 
@@ -145,9 +150,10 @@ ITMS là hệ thống quản lý tổng hợp dành cho bộ phận CNTT, cho ph
 
 **Thao tác**:
 - **Xem**: Nhấn vào tên kế hoạch trong danh sách
-- **Sửa**: Nhấn icon bút chì (chỉ khi trạng thái "Nháp")
+- **Sửa**: Nhấn "Chỉnh sửa" (chỉ khi trạng thái "Nháp")
 - **Phê duyệt**: Nhấn nút "Phê duyệt" (chỉ Admin/Manager)
 - **Từ chối**: Nhấn nút "Từ chối" + nhập lý do
+- **Đưa về nháp** *(v1.1)*: Nhấn "Đưa về nháp" để revert kế hoạch đã duyệt/chờ duyệt/bị từ chối về trạng thái Nháp (Admin/Manager)
 
 ### 4.4 Trạng thái Kế hoạch
 
@@ -158,6 +164,9 @@ stateDiagram-v2
     ChờDuyệt --> ĐãDuyệt: Phê duyệt
     ChờDuyệt --> TừChối: Từ chối
     TừChối --> Nháp: Chỉnh sửa lại
+    ĐãDuyệt --> Nháp: Đưa về nháp
+    ChờDuyệt --> Nháp: Đưa về nháp
+    TừChối --> Nháp: Đưa về nháp
 ```
 
 ---
@@ -176,9 +185,20 @@ stateDiagram-v2
 | 2 | **Bộ lọc Danh mục** | Hardware, Software, Services, Network... |
 | 3 | **Bộ lọc Khoảng ngày** | Chọn từ ngày — đến ngày |
 | 4 | **Nút "Thêm chi phí"** | Mở form ghi nhận chi phí mới |
-| 5 | **Bảng chi phí** | Ngày, Danh mục, Mô tả, Số tiền, Nhà cung cấp, Dự án |
+| 5 | **Nút Xuất Excel** *(v1.1)* | Xuất danh sách chi phí ra file Excel (.xlsx) |
+| 6 | **Bảng chi phí** | Ngày, Danh mục, Mô tả, Số tiền, NCC, Số HĐ, Thao tác |
+| 7 | **Cột Thao tác** *(v1.1)* | Nút ✏️ (Sửa inline) và 🗑️ (Xóa) cho mỗi dòng |
 
-### 5.2 Ghi nhận Chi phí Mới
+### 5.2 Sửa Chi phí Inline *(v1.1)*
+
+**Thao tác**:
+1. Nhấn icon **✏️ (bút chì)** ở cột "Thao tác" trên dòng cần sửa
+2. Cả dòng chuyển thành các ô input: Ngày, Danh mục, Mô tả, Số tiền, NCC, Số HĐ
+3. Chỉnh sửa giá trị cần thay đổi
+4. Nhấn **✓** để lưu hoặc **✗** để hủy
+5. Dòng quay lại hiển thị bình thường
+
+### 5.3 Ghi nhận Chi phí Mới
 
 **Đường dẫn**: `/costs/create`
 
@@ -189,8 +209,8 @@ stateDiagram-v2
 4. Nhập **Ngày phát sinh**
 5. Nhập **Tên danh mục chi phí**
 6. Nhập **Mô tả chi tiết**
-7. Nhập **Số tiền** (VNĐ)
-8. Nhập **Nhà cung cấp**
+7. Nhập **Số tiền** (VNĐ) — tự động format dấu chấm phân cách *(v1.1)*
+8. Chọn **Nhà cung cấp** từ dropdown *(v1.1)*
 9. Nhấn **"Lưu"**
 
 > ⚠️ **Lưu ý**: Chi phí sau khi lưu sẽ tự động cập nhật vào Dashboard và Báo cáo.
@@ -279,8 +299,8 @@ stateDiagram-v2
 |---|---------|-----------|
 | 1 | **Thêm NCC** | Nhấn "Thêm NCC" → Nhập tên, MST, địa chỉ, SĐT, email, người liên hệ |
 | 2 | **Tìm kiếm** | Nhập tên/MST vào ô tìm kiếm |
-| 3 | **Xem chi tiết** | Nhấn vào tên NCC → Trang chi tiết (thông tin, hợp đồng, lịch sử) |
-| 4 | **Sửa NCC** | Trong trang chi tiết, nhấn "Sửa" |
+| 3 | **Xem chi tiết** | Nhấn vào tên NCC → Trang chi tiết (thông tin, hợp đồng, chi phí liên quan, tài sản liên kết) |
+| 4 | **Sửa NCC inline** *(v1.1)* | Trong trang chi tiết, nhấn "Chỉnh sửa" → 13 trường có thể sửa trực tiếp |
 
 ### 8.2 Hợp đồng (Đường dẫn: `/contracts/create`)
 
@@ -308,6 +328,7 @@ stateDiagram-v2
 | **VPS** | Virtual Private Servers | Hostname, IP, specs (CPU/RAM/SSD), provider |
 | **Bản quyền** | Software licenses | Tên PM, loại license, số lượng, ngày hết hạn |
 | **SSL** | SSL certificates | Domain, loại cert, ngày hết hạn, provider |
+| **API Keys** *(v1.1)* | API key management | Tên key, key value, trạng thái, ngày hết hạn |
 
 ### Thao tác chung cho mỗi tab
 
@@ -388,13 +409,15 @@ stateDiagram-v2
 | **So sánh Chi phí** | Cost Comparison | Biểu đồ dự chi vs thực chi theo tháng |
 | **Tổng quan Tài sản** | Asset Overview | Số lượng tài sản theo loại (HW, SW, Infra) |
 | **NS Dự án** | Project Budget | Chi tiết ngân sách từng dự án |
+| **Phương tiện** *(v1.1)* | Vehicle Report | Tổng chi phí xe theo loại (cố định/biến đổi) |
+| **Hợp đồng** *(v1.1)* | Contract Report | Tổng hợp hợp đồng: active, sắp hết hạn, đã hết hạn |
 
 ### Thao tác
 
 1. **Chọn năm**: Dropdown chọn năm báo cáo
 2. **Chuyển tab**: Nhấn các tab để xem loại báo cáo khác nhau
 3. **Xem biểu đồ**: Hover để xem chi tiết số liệu
-4. **Xuất báo cáo**: (Tính năng dự kiến) Xuất PDF/Excel
+4. **Xuất Excel** *(v1.1)*: Nhấn nút xuất để download dữ liệu
 
 ---
 
@@ -437,21 +460,100 @@ stateDiagram-v2
 | 3 | **Vô hiệu hóa** | Nhấn icon khóa → Tài khoản sẽ không đăng nhập được |
 | 4 | **Phân quyền** | Chọn vai trò: Admin, Manager, User, Viewer |
 
+### 14.2 Cấu hình Hệ thống *(v1.1)*
+
+**Đường dẫn**: `/settings/config`
+
+| Mục | Nội dung |
+|-----|---------|
+| **Thông tin công ty** | Tên, địa chỉ, email, phone |
+| **Ngưỡng cảnh báo** | Ngưỡng % ngân sách, ngày hết hạn domain/SSL/HĐ |
+| **Cài đặt chung** | Ngôn ngữ mặc định, định dạng số |
+| **Thông tin hệ thống** | Phiên bản, database, uptime |
+
+### 14.3 Bảo mật *(v1.1)*
+
+**Đường dẫn**: `/settings/security`
+
+| Mục | Nội dung |
+|-----|---------|
+| **Đổi mật khẩu** | Nhập mật khẩu cũ → mới → xác nhận |
+| **Xác thực 2 lớp (2FA)** | Bật/tắt 2FA với authenticator app (QR code) |
+| **Quản lý phiên** | Xem danh sách phiên đăng nhập, đăng xuất từ xa |
+
 ### Ma trận Phân quyền
 
 | Module | Admin | Manager | User | Viewer |
 |--------|-------|---------|------|--------|
 | Dashboard | ✅ Xem | ✅ Xem | ✅ Xem | ✅ Xem |
-| Kế hoạch NS | ✅ CRUD + Duyệt | ✅ CRUD + Duyệt | ✅ Xem | ✅ Xem |
-| Chi phí | ✅ CRUD | ✅ CRUD | ✅ Tạo/Xem | ✅ Xem |
+| Kế hoạch NS | ✅ CRUD + Duyệt + Revert | ✅ CRUD + Duyệt + Revert | ✅ Xem | ✅ Xem |
+| Chi phí | ✅ CRUD + Edit inline | ✅ CRUD + Edit inline | ✅ Tạo/Xem | ✅ Xem |
 | Dự án | ✅ CRUD | ✅ CRUD | ✅ Xem | ✅ Xem |
 | Tài sản | ✅ CRUD | ✅ CRUD | ✅ Xem/Sửa (assigned) | ✅ Xem |
 | Người dùng | ✅ CRUD | ❌ | ❌ | ❌ |
 | Nhật ký | ✅ Xem tất cả | ✅ Xem tất cả | ✅ Chỉ của mình | ❌ |
+| Cấu hình | ✅ Sửa | ❌ | ❌ | ❌ |
 
 ---
 
-## 15. Flows & Use Cases
+## 15. Tính năng Nâng cao (v1.1)
+
+### 15.1 Xuất dữ liệu Excel (.xlsx)
+
+Nút **"Xuất Excel"** có sẵn trên 8 trang: Chi phí, Kế hoạch NS, NCC, Phương tiện, Tài sản phần mềm, Tài sản phần cứng, Dự chi, Nhật ký.
+
+| Bước | Thao tác |
+|------|---------|
+| 1 | Nhấn nút **"Xuất"** ở góc phải header |
+| 2 | File Excel (.xlsx) tự động download về máy |
+| 3 | Mở bằng Excel hoặc Google Sheets |
+
+### 15.2 Đa ngôn ngữ (i18n)
+
+| Bước | Thao tác |
+|------|---------|
+| 1 | Mở Sidebar → tìm nút **VI / EN** ở cuối sidebar |
+| 2 | Nhấn vào flag icon để chuyển đổi |
+| 3 | Toàn bộ giao diện (sidebar + nội dung) chuyển sang ngôn ngữ đã chọn |
+
+> Hỗ trợ: **Tiếng Việt (VI)** và **Tiếng Anh (EN)**
+
+### 15.3 Dark Mode
+
+Nhấn nút **🌙/☀️** ở cuối Sidebar để chuyển đổi giao diện sáng/tối.
+
+### 15.4 Inline Edit (Sửa trực tiếp)
+
+Các module hỗ trợ sửa trực tiếp trên giao diện:
+
+| Module | Cách sửa |
+|--------|----------|
+| **Chi phí thực tế** | Nhấn ✏️ → dòng chuyển thành input → ✓ lưu / ✗ hủy |
+| **NCC** | Chi tiết NCC → "Chỉnh sửa" → 13 trường inline |
+| **Hợp đồng** | Chi tiết HĐ → "Chỉnh sửa" → form inline |
+| **Phương tiện** | Bảng xe/dịch vụ → icon ✏️ → drawer sửa |
+
+### 15.5 Định dạng Tiền tệ VNĐ
+
+- Input số tiền tự động thêm dấu chấm phân cách: `150.000.000`
+- Dashboard hiển thị viết tắt: `1.5B` = 1,5 tỷ, `525M` = 525 triệu
+- Nhất quán trên toàn hệ thống (sử dụng component `CurrencyInput` + `formatCurrency()`)
+
+### 15.6 Data Linking (Liên kết dữ liệu)
+
+Các trường liên kết sử dụng dropdown thay vì nhập text thủ công:
+
+| Trường | Dropdown từ |
+|--------|------------|
+| **Nhà cung cấp** | Danh sách NCC đã tạo (`VendorSelect`) |
+| **Hợp đồng** | Danh sách HĐ (`ContractSelect`) |
+| **Dự án** | Danh sách dự án (`ProjectSelect`) |
+| **Danh mục** | Danh mục ngân sách (`CategorySelect`) |
+| **Người dùng** | Danh sách users (`UserSelect`) |
+
+---
+
+## 16. Flows & Use Cases
 
 ### 🔄 Flow 1: Quy trình Lập & Duyệt Kế hoạch Ngân sách
 
@@ -690,5 +792,5 @@ flowchart TD
 
 ---
 
-> 📝 **Tài liệu này được cập nhật lần cuối**: 14/03/2026  
-> **Phiên bản**: 1.0.0
+> 📝 **Tài liệu này được cập nhật lần cuối**: 15/03/2026  
+> **Phiên bản**: 1.1.0

@@ -1,13 +1,35 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CacheService } from '../cache/cache.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
 
-  async getSummary() {
-    const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1);
+  async getSummary(year?: number, month?: number, quarter?: number) {
+    const targetYear = year || new Date().getFullYear();
+    const cacheKey = `dashboard:summary:${targetYear}:${month || 0}:${quarter || 0}`;
+
+    return this.cache.wrap(cacheKey, async () => {
+
+    // Calculate date range based on filters
+    let startDate: Date;
+    let endDate: Date;
+
+    if (month) {
+      startDate = new Date(targetYear, month - 1, 1);
+      endDate = new Date(targetYear, month, 0, 23, 59, 59);
+    } else if (quarter) {
+      const qStartMonth = (quarter - 1) * 3;
+      startDate = new Date(targetYear, qStartMonth, 1);
+      endDate = new Date(targetYear, qStartMonth + 3, 0, 23, 59, 59);
+    } else {
+      startDate = new Date(targetYear, 0, 1);
+      endDate = new Date(targetYear, 11, 31, 23, 59, 59);
+    }
 
     const [
       budgetAgg,
@@ -18,22 +40,22 @@ export class DashboardService {
       budgetByCategory,
       costByCategory,
     ] = await Promise.all([
-      // Total budget (approved plans this year)
+      // Total budget (approved plans for target year)
       this.prisma.budgetPlan.aggregate({
         _sum: { totalAmount: true },
-        where: { year: currentYear, status: 'approved' },
+        where: { year: targetYear, status: 'approved' },
       }),
 
-      // Total spent (costs this year)
+      // Total spent (costs in date range)
       this.prisma.actualCost.aggregate({
         _sum: { amount: true },
-        where: { costDate: { gte: startOfYear } },
+        where: { costDate: { gte: startDate, lte: endDate } },
       }),
 
-      // Plan counts
-      this.prisma.budgetPlan.count({ where: { year: currentYear } }),
+      // Plan counts for target year
+      this.prisma.budgetPlan.count({ where: { year: targetYear } }),
 
-      // Pending approval
+      // Pending approval (always current)
       this.prisma.budgetPlan.count({ where: { status: 'pending' } }),
 
       // Recent activity from audit logs
@@ -43,7 +65,7 @@ export class DashboardService {
         take: 5,
       }),
 
-      // Budget by category (from approved plans)
+      // Budget by category (from approved plans for target year)
       this.prisma.$queryRawUnsafe<{ name: string; total: string }[]>(
         `SELECT bc.name, SUM(bi.total_price)::text as total
          FROM budget_categories bc
@@ -51,16 +73,17 @@ export class DashboardService {
          JOIN budget_plans bp ON bp.id = bc.plan_id
          WHERE bp.year = $1 AND bp.status = 'approved'
          GROUP BY bc.name ORDER BY total DESC LIMIT 8`,
-        currentYear,
+        targetYear,
       ),
 
-      // Cost by category
+      // Cost by category (in date range)
       this.prisma.$queryRawUnsafe<{ name: string; total: string }[]>(
         `SELECT category_name as name, SUM(amount)::text as total
          FROM actual_costs
-         WHERE cost_date >= $1
+         WHERE cost_date >= $1 AND cost_date <= $2
          GROUP BY category_name ORDER BY total DESC LIMIT 8`,
-        startOfYear,
+        startDate,
+        endDate,
       ),
     ]);
 
@@ -89,6 +112,11 @@ export class DashboardService {
       }),
     );
 
+    // Filter label for UI
+    let filterLabel = `Năm ${targetYear}`;
+    if (month) filterLabel = `Tháng ${month}/${targetYear}`;
+    else if (quarter) filterLabel = `Quý ${quarter}/${targetYear}`;
+
     return {
       success: true,
       data: {
@@ -98,6 +126,7 @@ export class DashboardService {
         planCount,
         pendingApproval: pendingCount,
         budgetVsActual,
+        filterLabel,
         recentActivity: recentActivity.map((a) => ({
           id: a.id,
           user: a.user.fullName,
@@ -107,5 +136,6 @@ export class DashboardService {
         })),
       },
     };
+    }, 30_000); // 30s TTL
   }
 }

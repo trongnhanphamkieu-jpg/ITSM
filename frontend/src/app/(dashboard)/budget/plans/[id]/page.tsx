@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 
@@ -54,9 +55,7 @@ const STATUS_MAP: Record<
   rejected: { label: "Từ chối", variant: "danger" },
 };
 
-function formatCurrency(value: string | number) {
-  return new Intl.NumberFormat("vi-VN").format(Number(value)) + "₫";
-}
+
 
 export default function BudgetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -100,6 +99,8 @@ export default function BudgetDetailPage() {
         await api.delete(`/budget-plans/${id}`);
         router.push("/budget/plans");
         return;
+      } else if (action === "revert") {
+        await api.post(`/budget-plans/${id}/revert`);
       }
       await fetchPlan();
     } catch {
@@ -154,6 +155,13 @@ export default function BudgetDetailPage() {
 
             {plan.status === "draft" && (
               <>
+                <Link
+                  href={`/budget/plans/create?editId=${plan.id}`}
+                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
+                >
+                  <i className="bi bi-pencil-square mr-1.5" />
+                  Chỉnh sửa
+                </Link>
                 <button
                   onClick={() => handleAction("submit")}
                   disabled={!!actionLoading}
@@ -191,6 +199,17 @@ export default function BudgetDetailPage() {
                   Từ chối
                 </button>
               </>
+            )}
+
+            {(plan.status === "approved" || plan.status === "rejected" || plan.status === "pending") && (
+              <button
+                onClick={() => handleAction("revert")}
+                disabled={!!actionLoading}
+                className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-50"
+              >
+                <i className="bi bi-arrow-counterclockwise mr-1.5" />
+                Đưa về nháp
+              </button>
             )}
           </div>
         }

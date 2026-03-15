@@ -1,12 +1,13 @@
 # SRS – ĐẶC TẢ YÊU CẦU PHẦN MỀM
 ## Hệ thống Quản trị Công nghệ Thông tin Nội bộ (IT Management System – ITMS)
 
-**Phiên bản:** 1.5  
+**Phiên bản:** 1.6  
 **Ngày lập:** 13/03/2026  
-**Cập nhật:** 14/03/2026 – Redesign Module 10: Vehicle Cost → subscription model (vehicle_service_subscriptions, costType, vehicle detail page), index recommendations, timestamps cho tất cả bảng  
+**Cập nhật:** 15/03/2026 – v1.6: Bổ sung SRS cho liên kết dữ liệu xuyên module, shared components, schema migration, file upload, number formatting, edit/revert, export  
+**Lịch sử:** 14/03 v1.5 – Redesign Module 10 Vehicle Cost subscription model  
 **Người soạn:** Team Phát triển  
 **Trạng thái:** Bản nháp  
-**Tham chiếu:** BRD_IT_Management_System.md | PRD_IT_Management_System.md
+**Tham chiếu:** BRD_IT_Management_System.md v1.6 | PRD_IT_Management_System.md v1.6
 
 ---
 
@@ -1385,6 +1386,99 @@ volumes:
 
 ---
 
+## 7b. YÊU CẦU KỸ THUẬT XUYENSE MODULE (Cross-cutting v1.6)
+
+### 7b.1 Schema Migration — Fix broken FKs
+
+```sql
+-- Migration: actual_costs.vendor VARCHAR → vendor_id FK
+ALTER TABLE actual_costs ADD COLUMN vendor_id UUID REFERENCES vendors(id);
+-- Data migration: match existing vendor text to vendor IDs
+UPDATE actual_costs ac SET vendor_id = v.id FROM vendors v WHERE LOWER(ac.vendor) = LOWER(v.name);
+ALTER TABLE actual_costs DROP COLUMN vendor;
+
+-- Migration: actual_costs.category_name VARCHAR → category_id FK (requires categories table)
+CREATE TABLE categories (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name        VARCHAR(255) NOT NULL UNIQUE,
+  module      VARCHAR(50) DEFAULT 'cost',
+  sort_order  INTEGER DEFAULT 0,
+  created_at  TIMESTAMP DEFAULT NOW()
+);
+ALTER TABLE actual_costs ADD COLUMN category_id UUID REFERENCES categories(id);
+
+-- Migration: cost_forecast_items.vendor VARCHAR → vendor_id FK
+ALTER TABLE cost_forecast_items ADD COLUMN vendor_id UUID REFERENCES vendors(id);
+UPDATE cost_forecast_items fi SET vendor_id = v.id FROM vendors v WHERE LOWER(fi.vendor) = LOWER(v.name);
+ALTER TABLE cost_forecast_items DROP COLUMN vendor;
+
+-- Migration: assigned_to VARCHAR → assigned_to_id FK (hardware_assets, ip_addresses, vehicles, email_accounts)
+ALTER TABLE hardware_assets ADD COLUMN assigned_to_id UUID REFERENCES users(id);
+ALTER TABLE ip_addresses ADD COLUMN assigned_to_id UUID REFERENCES users(id);
+ALTER TABLE vehicles ADD COLUMN assigned_to_id UUID REFERENCES users(id);
+ALTER TABLE email_accounts ADD COLUMN assigned_to_id UUID REFERENCES users(id);
+```
+
+### 7b.2 Shared Frontend Components
+
+| Component | Props | Data Source | Dùng tại |
+|-----------|-------|-------------|----------|
+| `<VendorSelect>` | `value`, `onChange`, `required` | `GET /vendors?status=active&limit=100` | Cost, Soft Inv, Hard Inv, Vehicle, Forecast |
+| `<ContractSelect>` | `value`, `onChange`, `vendorId` (cascade) | `GET /contracts?vendorId=X&status=active` | Soft Inv, Hard Inv |
+| `<ProjectSelect>` | `value`, `onChange` | `GET /projects?status=active` | Budget Item, Cost, Forecast |
+| `<CategorySelect>` | `value`, `onChange` | `GET /categories` | Cost create |
+| `<UserSelect>` | `value`, `onChange` | `GET /users?status=active` | Hard Inv (assignedTo), IP, Vehicle |
+| `<CurrencyInput>` | `value`, `onChange`, `currency` | N/A (local format) | Budget, Cost, Contract, Vehicle, Forecast |
+| `<FileUpload>` | `entityType`, `entityId`, `onUpload` | `POST /files/upload` (MinIO) | Vendor, Contract, Cost |
+| `<ExportButton>` | `endpoint`, `filename`, `filters` | `GET /{module}/export` | All list pages |
+
+### 7b.3 New/Updated API Endpoints
+
+```
+# Category Management (for cost category dropdown)
+GET    /api/v1/categories          -- List all categories
+POST   /api/v1/categories          -- Create category
+PATCH  /api/v1/categories/:id      -- Update category
+DELETE /api/v1/categories/:id      -- Delete category
+
+# Contract Status Management
+PATCH  /api/v1/contracts/:id/status  -- Change contract status {status: 'active'|'expired'|'terminated'}
+
+# Budget Admin Revert
+PATCH  /api/v1/budget-plans/:id/revert  -- Admin revert approved → draft
+
+# File Upload (MinIO)
+POST   /api/v1/files/upload        -- Upload file (multipart)
+GET    /api/v1/files/:id            -- Download file
+DELETE /api/v1/files/:id            -- Delete file
+
+# Export Excel
+GET    /api/v1/budget-plans/export   -- Export budget plans
+GET    /api/v1/actual-costs/export   -- Export costs
+GET    /api/v1/vendors/export        -- Export vendors
+GET    /api/v1/contracts/export      -- Export contracts
+GET    /api/v1/soft-inventory/{type}/export  -- Export soft assets
+GET    /api/v1/hard-inventory/{type}/export  -- Export hard assets
+GET    /api/v1/vehicles/export       -- Export vehicles
+GET    /api/v1/cost-forecasts/:id/export  -- Export forecast
+GET    /api/v1/audit-logs/export     -- Export activity logs
+```
+
+### 7b.4 Number Formatting Rules
+
+- **Input:** `<CurrencyInput>` sử dụng `Intl.NumberFormat('vi-VN')` hiển thị `1.000.000`, lưu raw number `1000000`
+- **Display:** Tất cả số tiền hiển thị sử dụng `formatCurrency()` utility: `1.000.000 đ`
+- **API:** Luôn lưu và trả về raw number (không format)
+
+### 7b.5 Edit/Revert Rules
+
+- Tất cả entity đều có endpoint `PATCH /api/v1/{entity}/:id`
+- Form edit reuse create form với pre-fill data
+- Budget Plan revert: chỉ Admin, `PATCH /budget-plans/:id/revert`, ghi audit log, status `approved` → `draft`
+- Cost Forecast revert: tương tự, `PATCH /cost-forecasts/:id/revert`
+
+---
+
 ## 9. PHỤ LỤC
 
 ### 9.1 Template Excel Import
@@ -1418,12 +1512,13 @@ Mỗi module có file template Excel riêng đặt tại `templates/`:
 | Hard Inventory | BR-28 đến BR-33 | US-H01 đến US-H05 |
 | Access Control | BR-34 đến BR-39 | US-A01 đến US-A05 |
 | Infrastructure | BR-40 đến BR-46 | US-I01 đến US-I07 |
-| Dashboard | BR-51 đến BR-57 | US-D01 đến US-D06 |
-| Report | BR-58 đến BR-65 | US-R01 đến US-R07 |
-| Vehicle Cost | BR-VCM-01 đến BR-VCM-15 | US-VCM01 đến US-VCM10 |
+| Dashboard | BR-51 đến BR-57 | US-D01 đến US-D07 |
+| Report | BR-58 đến BR-68 | US-R01 đến US-R08 |
+| Vehicle Cost | BR-VCM-01 đến BR-VCM-13 | US-VCM01 đến US-VCM11 |
 | Project Budget | BR-PRJ-01 đến BR-PRJ-07 | US-P01 đến US-P06 |
 | Activity Log | BR-LOG-01 đến BR-LOG-09 | US-AL01 đến US-AL07 |
 | Cost Forecast | BR-FC-01 đến BR-FC-15 | US-FC01 đến US-FC08 |
+| **Cross-cutting Enhancement** | **BR-ENH-01 đến BR-ENH-14** | **US-ENH01 đến US-ENH15** |
 
 ---
 

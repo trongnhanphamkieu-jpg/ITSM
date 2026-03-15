@@ -1,9 +1,10 @@
 # BRD – TÀI LIỆU YÊU CẦU NGHIỆP VỤ
 ## Hệ thống Quản trị Công nghệ Thông tin Nội bộ (IT Management System – ITMS)
 
-**Phiên bản:** 1.5  
+**Phiên bản:** 1.6  
 **Ngày lập:** 13/03/2026  
-**Cập nhật:** 14/03/2026 – Redesign Module 10: Vehicle Cost → mô hình subscription (chi phí cố định/biến đổi, costType, vehicle detail page)  
+**Cập nhật:** 15/03/2026 – v1.6: Bổ sung yêu cầu liên kết dữ liệu xuyên module, file upload, quản lý trạng thái HĐ, format số tiền, dashboard nâng cao, export Excel, edit/revert  
+**Lịch sử:** 14/03 v1.5 – Redesign Module 10 Vehicle Cost subscription model  
 **Người soạn:** Team IT  
 **Trạng thái:** Bản nháp
 
@@ -349,6 +350,45 @@ IT Staff lập bảng dự chi tháng M+1 → IT Manager phê duyệt → Tháng
 
 ---
 
+### 2.14 Yêu cầu xuyên module (Cross-cutting Enhancement v1.6)
+
+**Mục tiêu nghiệp vụ:**  
+Đảm bảo dữ liệu giữa các module được liên kết chặt chẽ, nhất quán; nâng cao trải nghiệm nhập liệu và quản trị.
+
+**A. Liên kết dữ liệu xuyên module (Data Linking):**
+- BR-ENH-01: Tất cả các trường "Nhà cung cấp" trên mọi module (Chi phí, Tài sản, Xe, Dự chi) phải là dropdown chọn từ danh mục NCC đã tạo — KHÔNG cho phép nhập text tự do
+- BR-ENH-02: Tất cả tài sản (phần mềm + phần cứng) phải liên kết được với NCC và Hợp đồng tương ứng
+- BR-ENH-03: Hạng mục ngân sách (budget item) phải cho phép chọn Dự án từ danh mục dự án đã tạo
+- BR-ENH-04: Chi phí thực tế phải chọn từ danh mục hạng mục (category dropdown) thay vì nhập text
+- BR-ENH-05: Trường "Gán cho" (assigned to) thiết bị/IP phải chọn từ danh sách nhân viên hệ thống
+
+**B. Tệp đính kèm (File Upload):**
+- BR-ENH-06: Cho phép tải lên tệp đính kèm tại: Nhà cung cấp, Hợp đồng, Chi phí thực tế (PDF, Excel, hình ảnh hóa đơn)
+
+**C. Quản lý trạng thái hợp đồng:**
+- BR-ENH-07: Hợp đồng có trạng thái quản lý: Nháp → Đang thực hiện → Hết hạn → Chấm dứt. Cho phép chuyển trạng thái có kiểm soát.
+
+**D. Định dạng số tiền:**
+- BR-ENH-08: Khi nhập số tiền tại mọi module, hệ thống tự động ngăn cách hàng nghìn bằng dấu chấm (1.000.000)
+
+**E. Dashboard nâng cao:**
+- BR-ENH-09: Dashboard cho phép lọc dữ liệu theo tháng, theo quý
+- BR-ENH-10: Dashboard hiển thị cảnh báo: hợp đồng/domain/license sắp hết hạn, chi phí bất thường
+
+**F. Liên kết chi phí – ngân sách:**
+- BR-ENH-11: Chi phí thực tế phải cho phép chọn từ kế hoạch ngân sách nào (Budget Plan → Category → Item) theo 2 bước cascade
+
+**G. Chỉnh sửa toàn hệ thống:**
+- BR-ENH-12: Tất cả dữ liệu đều cho phép chỉnh sửa (update/edit). Đối với ngân sách đã phê duyệt, Admin có quyền đổi trạng thái thành "Nháp" để chỉnh sửa lại.
+
+**H. Xuất file:**
+- BR-ENH-13: Module Ngân sách, Tài sản, Vận hành bổ sung chức năng xuất file Excel
+
+**I. Lọc tài sản nâng cao:**
+- BR-ENH-14: Tại module Quản lý tài sản (phần mềm + phần cứng), bổ sung bộ lọc theo NCC và trạng thái
+
+---
+
 ## 3. YÊU CẦU PHI CHỨC NĂNG
 
 | STT | Yêu cầu | Mô tả |
@@ -382,6 +422,9 @@ IT Staff lập bảng dự chi tháng M+1 → IT Manager phê duyệt → Tháng
 - Import/Export hoạt động đúng với template Excel được cung cấp
 - Chi phí từng xe được tổng hợp đúng theo tháng, không sai lệch; cảnh báo chi phí bất thường hoạt động chính xác
 - Dự chi được lập và phê duyệt đúng quy trình; so sánh dự chi vs thực tế chính xác theo tháng và năm
+- Tất cả trường NCC trên mọi module đều là dropdown liên kết với danh mục NCC — không có text input tự do
+- Tài sản phần mềm/phần cứng đều liên kết được với NCC và Hợp đồng tương ứng
+- Số tiền hiển thị và nhập liệu đúng định dạng ngăn cách hàng nghìn
 
 ---
 

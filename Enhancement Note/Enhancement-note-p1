@@ -1,0 +1,32 @@
+# Enhancement Note — Phase 1 (v1 Update)
+
+> Ngày: 15/03/2026
+> Trạng thái: ✅ Đã duyệt — Plan tại `docs/PLAN-v1-enhancement.md`
+
+---
+
+## Danh sách tính năng cần bổ sung (từ User)
+
+1. ✅ Dữ liệu tại các module cần được liên kết với nhau (ví dụ: Tất cả các trường Nhà cung cấp phải là dropdown chọn từ danh sách nhà cung cấp đã tạo) → **A1, A3-A6**
+2. ✅ Cho tải lên tệp đính kèm ở mục NCC và Hợp đồng, chi phí thực tế → **A8**
+3. ✅ Bổ sung quản lý trạng thái hợp đồng → **A9**
+4. ✅ Khi nhập số tiền cần ngăn cách bằng dấu chấm → **A1.6, A7**
+5. ✅ Dashboard cần bổ sung bộ lọc theo tháng, theo quý → **B1**
+6. ✅ Dashboard cần bổ sung cảnh báo các hợp đồng/domain sắp hết hạn hoặc các cảnh báo bất thường → **B2**
+7. ✅ Chi phí thực tế cần bổ sung thêm trường chọn từ ngân sách nào (dựa trên kế hoạch ngân sách đã tạo) → **A3**
+8. ✅ Bổ sung quản lý API và key token trong tài sản phần mềm → **C1**
+9. ✅ Tại module quản lý tài sản, bổ sung bộ lọc theo NCC và trạng thái → **A4, A5**
+10. ✅ Tất cả các dữ liệu đều cho phép update/edit, đối với ngân sách đã được duyệt thì cho phép admin đổi trạng thái thành "Nháp" để chỉnh sửa lại → **A10**
+11. ✅ Module quản lý ngân sách, quản lý tài sản, vận hành cần bổ sung thêm tính năng export thành file excel → **A11**
+
+---
+
+## Bổ sung từ System Assessment + Data Linking Audit
+
+- 4 Schema FK fixes (ActualCost.vendor, categoryName, ForecastItem.vendor, assignedTo) → **A2**
+- 16 Frontend form linking gaps (FE-only fixes) → **A4, A5, A6**
+- Cross-reference views (Vendor detail, Contract detail, User assets) → **B3, B7, B8**
+- Users page mock data → **A12**
+- Broken links fix → **A13**
+
+> **Tổng: ~35 tasks | Phase A: ~12 ngày | Phase A+B: ~20 ngày**

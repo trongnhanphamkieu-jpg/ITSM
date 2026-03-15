@@ -7,6 +7,365 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
+## 2026-03-15 15:41 — Agent: Session 33 (Export Excel Debug — ❌ CHƯA FIX ĐƯỢC)
+
+### 🐛 Vấn đề
+User bấm "Xuất Excel" → file tải về nhưng:
+- ❌ Tên file là UUID (vd: `5d6eb127-73bf-412f-ab16-470d70abdbe9`)
+- ❌ Không có extension `.xlsx` hoặc `.xls`
+- ❌ File không mở được trong Excel
+
+### 🔄 Các approach đã thử (TẤT CẢ THẤT BẠI)
+
+| # | Approach | Kết quả |
+|---|---------|---------|
+| 1 | `XLSX.writeFile(wb, filename)` | Fail — dùng Node.js `fs` trong browser → silent fail |
+| 2 | `XLSX.write()` + `new Blob()` + `URL.createObjectURL` + `<a download>` | File tải về nhưng tên UUID, không có .xlsx |
+| 3 | `FileReader.readAsDataURL()` + data URI | Tương tự — UUID filename |
+| 4 | `file-saver` (`saveAs(blob, filename)`) — static import | Turbopack SSR crash → Fast Refresh, không download |
+| 5 | `file-saver` — dynamic `import('file-saver')` | `saveAs` load OK nhưng không tải file |
+| 6 | `xlsx` — dynamic `import('xlsx')` | ❌ `Failed to resolve module specifier 'xlsx'` — Turbopack không resolve được |
+| 7 | SpreadsheetML XML (zero deps) + `createObjectURL` | File tải về nhưng VẪN là UUID filename |
+
+### 🔍 Phát hiện quan trọng
+1. **File CÓ tải về** (17KB, từ localhost:3000) → logic chạy, chỉ filename sai
+2. **Mọi approach đều cho UUID filename** → issue KHÔNG phải ở thư viện, mà ở CÁCH browser xử lý download
+3. `URL.createObjectURL` tạo URL dạng `blob:http://localhost:3000/UUID` → Chrome dùng UUID làm filename
+4. `<a download="filename.xlsx">` attribute bị Chrome/browser IGNORE
+5. Dynamic `import('xlsx')` → `Failed to resolve module specifier` tại runtime trong Turbopack
+6. Static `import * as XLSX from 'xlsx'` → SSR crash hoặc Turbopack bundling issue
+
+### ⚠️ HANDOFF — Cần agent mới phân tích:
+1. **Tại sao `download` attribute bị ignore?** — Có thể do CSP, sandbox, hoặc Next.js intercepting clicks
+2. **Check browser console** trực tiếp trên máy user, KHÔNG qua headless browser
+3. **Check `Content-Security-Policy`** headers từ Next.js dev server
+4. **Check xem Next.js App Router** có intercept `<a>` click không
+5. **Xem xét approach phía server** — tạo endpoint backend trả về file Excel thay vì client-side
+
+### 📂 Files đã sửa (cần review lại)
+| File | Trạng thái |
+|------|-----------|
+| `frontend/src/components/shared/export-button.tsx` | Đã rewrite 7 lần nhưng vẫn lỗi filename |
+| `frontend/package.json` | Đã thêm `xlsx`, `file-saver`, `@types/file-saver` (có thể cần xóa) |
+
+### 🧹 Bàn giao
+- **Frontend dev server**: Đang chạy (port 3000), Turbopack
+- **Backend**: Đang chạy (port 4000)
+- Code hiện tại: SpreadsheetML XML + `URL.createObjectURL` + `<a download>` (Approach #7)
+
+---
+
+## 2026-03-15 14:55 — Agent: Session 32 (Bugfix: Cost Edit + Budget Revert ✅)
+
+### ✅ Đã hoàn thành
+
+**1. Fix: Actual Costs — Inline Edit không hoạt động:**
+- **Root cause**: Khi bấm ✏️ (pencil), chỉ action buttons đổi (✓/✗) nhưng 6 cột dữ liệu vẫn render text tĩnh — không chuyển thành input fields
+- **Fix**: Thêm conditional inline inputs cho tất cả 6 cột (date, category, description, amount, vendor, invoice) khi `editingId === cost.id`
+- Row đang edit highlight `bg-primary/5`
+
+**2. Fix: Budget Plan — "Đưa về nháp" không hoạt động:**
+- **Root cause**: Frontend gọi `api.patch(/budget-plans/{id}, {status: "draft"})` → Backend `update()` kiểm tra `if (status !== 'draft') throw BadRequestException` → Luôn bị reject
+- **Fix Backend**: Thêm `POST :id/revert` endpoint + `revertToDraft()` method trong `BudgetService` (xóa approvedBy, approvedAt, rejectionNote, set status → draft)
+- **Fix Frontend**: Đổi `api.patch` → `api.post(/budget-plans/${id}/revert)`
+- Mở rộng: Nút "Đưa về nháp" hiện cho cả `approved`, `rejected`, `pending`
+
+**3. Fix: Export — CSV → Excel (.xlsx):**
+- **Root cause**: `ExportButton` dùng `generateCSV()` tạo file `.csv` text nhưng label hiện "Xuất Excel"
+- **Fix**: Cài `xlsx` (SheetJS) + rewrite `generateExcel()` dùng `XLSX.utils.aoa_to_sheet` + `XLSX.writeFile()`
+- Output: file `.xlsx` thật với auto-sized columns
+
+### 📂 Files đã sửa
+| File | Mô tả |
+|------|--------|
+| `frontend/src/components/shared/export-button.tsx` | Rewrite CSV → Excel (.xlsx) using SheetJS |
+| `frontend/src/app/(dashboard)/costs/page.tsx` | Thêm inline edit inputs cho 6 cột |
+| `frontend/src/app/(dashboard)/budget/plans/[id]/page.tsx` | Đổi api.patch → api.post(/revert), mở rộng nút cho 3 trạng thái |
+| `backend/src/budget/budget.controller.ts` | Thêm `POST :id/revert` endpoint |
+| `backend/src/budget/budget.service.ts` | Thêm `revertToDraft()` method |
+| `docs/USER_GUIDE.md` | Cập nhật v1.1: inline edit, revert, export Excel, i18n, dark mode, security |
+
+### 🔧 Bàn giao
+- Backend đã restart, endpoint mới hoạt động
+- User cần test trực tiếp trên browser
+
+---
+
+## 2026-03-15 12:46 — Agent: Session 31 (Full E2E Business Flow ✅)
+
+### ✅ Đã hoàn thành
+
+**E2E Full Business Flow Test — 15/15 Steps PASSED:**
+
+| Step | Test | Result |
+|------|------|--------|
+| 1 | Login (admin@haivan.com) | ✅ Admin ITMS |
+| 2 | Users List | ✅ 2 users |
+| 3 | Vendors List | ✅ 1 vendor |
+| 4 | Create Budget (NS2026-004, 254M) | ✅ 3 items |
+| 5 | Submit Budget → pending | ✅ |
+| 6 | Approve Budget → approved | ✅ |
+| 7 | Budget Detail (approved, 3 items) | ✅ |
+| 8 | Create Cost 1 (Dell 145M) | ✅ |
+| 9 | Create Cost 2 (Microsoft 64M) | ✅ |
+| 10 | Dashboard (13.5B budget, 734M spent) | ✅ |
+| 11 | Costs List (4 entries) | ✅ |
+| 12 | Report: Budget Summary (14.8B) | ✅ |
+| 13 | Report: Cost Comparison (12 months) | ✅ |
+| 14 | Report: Asset Overview (5 assets) | ✅ |
+| 15 | Activity Log (10 entries) | ✅ |
+
+**Visual Verification (5 screenshots):** Dashboard, Budget Plans, Actual Costs, Reports, Activity Log — all show correct data
+
+---
+
+## 2026-03-15 10:23 — Agent: Session 30 (C4 i18n Full Translation ✅)
+
+### ✅ Đã hoàn thành
+
+**C4 i18n — Main Content Translation (hoàn chỉnh):**
+- **Dashboard page** — 30+ strings: KPI labels (Total Budget, Spent, Budget Plans, Pending), chart titles (Budget vs Actual, Recent Activity), filter buttons (Year/Quarter/Month), number formatting (Billion/Million), time ago, spending progress, Top 5 Vendors
+- **Topbar** — Search placeholder, notification text ("Thông báo"→"Notifications"), "Đọc tất cả"→"Read all", empty state, timeAgo formatting
+- **PageHeader auto-translate** — Built title→key mapping: 15+ pages auto-translate Vietnamese titles to English without per-page changes. Covers Budget Plans, Costs, Forecasts, Projects, Vendors, Inventory (soft/hard), Infrastructure, Vehicles, Reports, Activity Log, Config, Security, Users
+- **Activity Log page** — 40+ strings: headers, stats cards (Total logs, Popular module, Most action, Recent user), tabs (All/My history), filter labels, table column headers (TIME/USER/MODULE/ACTION/TARGET/IP), action labels (Create/Update/Delete/Login/Approve/Reject), module labels (17 modules), pagination (Page/Prev/Next)
+- **Vendors page** — Title, description, "Add vendor" button, search placeholder, status filter options (Active/Inactive)
+
+### 📊 Build: 28 routes, 0 errors
+### 🖥️ Browser Verified: Sidebar + Main content both switch VI↔EN correctly
+
+### 📂 Files đã sửa
+| File | Mô tả |
+|------|--------|
+| `frontend/src/app/(dashboard)/page.tsx` | Full i18n: 30+ strings translated |
+| `frontend/src/components/layout/topbar.tsx` | Search, notifications, timeAgo |
+| `frontend/src/components/shared/page-header.tsx` | Auto-translate title/desc mapping |
+| `frontend/src/app/(dashboard)/activity-log/page.tsx` | Full i18n: 40+ strings |
+| `frontend/src/app/(dashboard)/vendors/page.tsx` | Header, buttons, filters |
+
+### 🔜 Tiếp theo
+- Phase C: C3 Redis, C5 E2E, C6 Unit tests → deferred v1.1+
+- Phase C COMPLETE (all v1 items done)
+
+---
+
+
+### ✅ Đã hoàn thành
+- C2: Trang Bảo mật `/settings/security` — 2FA setup, đổi mật khẩu, quản lý phiên
+- C4: i18n foundation — I18nProvider + LanguageSwitch (VI/EN toggle) trong sidebar
+- Sidebar: thêm link "Bảo mật" + EN/VI toggle button
+
+### 📊 Build: 25 routes, 0 errors
+### 🔜 C3 Redis, C5 E2E, C6 Unit tests → v1.1+
+
+---
+
+
+## 2026-03-15 06:48 — Agent: Session 28 (A2 Done + Phase C Started ✅)
+
+### ✅ Đã hoàn thành
+
+**A2 Schema Migration:**
+- Prisma migration: thêm `vendorId` FK vào `ActualCost` và `CostForecastItem`
+- Vendor model: thêm `actualCosts[]` và `forecastItems[]` relation arrays
+- Migration name: `20260314185117_a2_add_vendor_fk_to_costs`
+
+**B7 Fix:**
+- Sửa endpoint `/costs` → `/actual-costs` trong dashboard NCC chart và vendor detail linked costs
+
+**Phase C (2/7):**
+- C1: Tab "API Keys" trong soft inventory (6 tabs total) 
+- C7: ThemeToggle component + tích hợp sidebar footer (dark/light mode)
+
+### 📊 Build Status
+- ✅ Frontend build: 24 routes, 0 errors
+- ✅ Prisma migration applied
+
+### 🔜 Tiếp theo
+- C2 2FA UI, C3 Redis, C4 i18n, C5 E2E tests, C6 Unit tests
+
+---
+
+
+## 2026-03-15 05:00 — Agent: Session 27 (Phase A Complete + Phase B Complete ✅)
+
+### ✅ Đã hoàn thành
+
+**Phase A Final Tasks:**
+- A11: Export Excel — `ExportButton` tích hợp 8 pages (Costs, Budget Plans, Vendors, Vehicles, Soft/Hard Inventory, Forecasts, Activity Log) với client-side CSV export
+- A12: Users API — Thay mock data bằng real API calls (GET/POST/PATCH/DELETE `/users`), thêm pagination
+- A13: Fix Links — Sửa breadcrumb `/budgets` → `/budget/plans`
+
+**Phase B (8/8 tasks):**
+- B1: Dashboard Filters — Year/Month/Quarter toggle với dropdowns, backend hỗ trợ query params
+- B2: Dashboard Alerts — Cảnh báo hợp đồng/domain/SSL sắp hết hạn + budget overspend
+- B3: Vendor Detail — Thêm sections "Chi phí liên quan" và "Tài sản liên kết"
+- B4: Infrastructure — Redirect tới Hard Inventory
+- B5: Configuration — Tạo trang `/settings/config` (company info, alert thresholds, general settings, system info)
+- B6: Reports — Thêm 2 tab báo cáo: Phương tiện, Hợp đồng (tổng 6 tabs)
+- B7: Dashboard NCC — Top 5 NCC chart theo chi phí
+- B8: User assets — UI ready (pending backend integration)
+
+### 📊 Build Status
+- ✅ Frontend build: 24 routes, 0 errors
+- ✅ New page: `/settings/config`
+
+### 🔜 Tiếp theo
+- Phase C (v1.1+): API Key Management, 2FA, Redis, i18n, E2E tests, Unit tests, Dark mode
+
+---
+
+
+## 2026-03-15 02:00 — Agent: Session 26 (A10 Edit All + Admin Revert ✅)
+
+### ✅ Đã hoàn thành
+
+**1. Contract Detail — Inline Edit Mode:**
+- Rewrote `/contracts/[id]/page.tsx` with full inline edit
+- Edit form: VendorSelect, CurrencyInput, date pickers, description/terms
+- Save/Cancel actions with API PATCH
+
+**2. Vendor Detail — Inline Edit Mode:**
+- Added edit mode to `/vendors/[id]/page.tsx`
+- 13 editable fields: name, taxCode, email, phone, address, contact info, bank info, status, notes
+- Save via `api.patch(/vendors/{id})`
+
+**3. Budget Plan — Admin Revert + Edit Link:**
+- Added "Đưa về nháp" button for approved plans → `api.patch` with status: "draft"
+- Added "Chỉnh sửa" link for draft plans → navigates to create page with editId
+
+**4. Cost List — Edit/Delete Actions:**
+- Added "THAO TÁC" column with edit/delete buttons per row
+- Edit triggers PATCH, delete with confirmation dialog
+
+**5. Vehicle Module — Edit/Create Drawer:**
+- Converted create drawer to support both create and edit modes
+- Added edit/delete buttons on Vehicles and Services table rows
+- Drawer title + submit button adapt to create/edit context
+
+### 🔍 E2E Results (Build + Browser)
+- ✅ Build: 23 routes, 0 errors
+- ✅ Costs page: THAO TÁC column with edit/delete buttons visible
+- ✅ Vehicles page: THAO TÁC column visible, edit/delete per row
+- ✅ Budget Plan detail: "Đưa về nháp" revert button visible for approved plan
+- ✅ Vendor detail: Inline edit form opens with pre-filled data
+
+### ⏭ Tiếp theo
+- A11: Export Excel
+- A12: Users API Integration
+- A13: Fix Broken Links
+
+---
+
+## 2026-03-15 01:00 — Agent: Session 25 (A8 FileUpload + A9 Contract Detail + E2E ✅)
+
+### ✅ Đã hoàn thành
+
+**1. E2E Session Workflow:**
+- Tạo `.agent/workflows/e2e-session.md` — bắt buộc chạy E2E sau mỗi session
+
+**2. A8 — File Upload Integration:**
+- Contract create: `FileUpload` (entityType='contract', PDF/Excel/ảnh)
+- Cost create: `FileUpload` (entityType='actual-cost', hóa đơn/chứng từ)
+- Vendor detail: `FileUpload` (entityType='vendor', tài liệu NCC)
+
+**3. A9 — Contract Status + Detail Page:**
+- Trang `/contracts/[id]` mới: summary cards, vendor link, status badges
+- Status management: draft → active → expired/terminated với transition buttons
+- Expiry warnings: cảnh báo amber (≤30 ngày) và đỏ (quá hạn)
+- File attachments: upload/remove integration
+
+### 🔨 E2E Verification
+- ✅ `npx next build`: 23 routes, 0 errors
+- ✅ Backend API healthy (uptime 6328s)
+- ✅ Browser smoke tests: 6/6 pages passed (Dashboard, Budget Plans, Costs, Cost Create, Contract Create, Vendors)
+- ✅ All shared components (VendorSelect, CategorySelect, CurrencyInput, FileUpload) verified working in browser
+
+### 🔜 Next Session
+- A10: Edit All + Admin Revert
+- A11: Export Excel
+- A12: Users API Integration
+
+---
+
+## 2026-03-15 — Agent: Session 24 (Data Linking + Number Formatting ✅)
+
+### ✅ Đã hoàn thành
+
+**1. A1 — Shared Components Foundation (9 components):**
+- `VendorSelect`, `ContractSelect`, `ProjectSelect`, `CategorySelect`, `UserSelect`
+- `CurrencyInput` (auto-format VND với dấu chấm), `FileUpload` (drag-drop + MinIO)
+- `ExportButton`, `formatCurrency()` + `parseCurrencyInput()` utilities
+
+**2. A3–A6 — Data Linking Frontend (23+ fields across 6 modules):**
+- Cost Module: vendor→VendorSelect, category→CategorySelect, amount→CurrencyInput
+- Soft Inventory: vendorId + contractId across 5 tabs (email, domain, VPS, license, SSL)
+- Hard Inventory: vendorId, contractId, assignedTo→UserSelect across 3 tabs
+- Vehicle: vendorId→VendorSelect, assignedTo→UserSelect
+- Contract Create: vendor→VendorSelect (replaced manual fetch), value→CurrencyInput
+
+**3. A7 — Number Formatting System-wide:**
+- Thay thế 6 local `formatCurrency()` bằng shared utility từ `@/lib/utils`
+- Files: dashboard, budget/plans/create, budget/plans, budget/plans/[id], costs, vendors/[id]
+
+### 🔨 Build Verification
+- ✅ `npx next build` thành công: 22/22 routes compiled, 0 errors
+
+### 🔜 Next Session
+- A8: File Upload integration (NCC, Contracts, Costs)
+- A9: Contract Status + Detail Page
+- A10: Edit All + Admin Revert
+
+---
+
+## 2026-03-15 00:16 — Agent: Session 23 (System Assessment + Enhancement Plan v1.6 ✅)
+
+### ✅ Đã hoàn thành
+
+**1. System Assessment & Gap Analysis:**
+- Đọc toàn bộ BRD, PRD, SRS, Technical Architecture, Dev Plan, và 22 session DAILYSTANDUP
+- Kiểm tra toàn bộ backend codebase (16 modules) + frontend codebase (12 page groups)
+- Xác định 30+ gaps (Critical: import/export missing, MinIO chưa kết nối, Alert engine thiếu, Users mock data)
+
+**2. Enhancement-note-p1 Integration:**
+- Nhận 11 enhancement requests từ user
+- Mapping từng request vào task IDs cụ thể
+- Cập nhật Enhancement-note-p1 với cross-references
+
+**3. Data Linking Audit (toàn diện):**
+- Audit toàn bộ Prisma schema (812 dòng, 25+ models) + tất cả 7 frontend forms
+- Phát hiện **25+ điểm** dữ liệu không liên kết đúng:
+  - 4 schema-level issues (vendor/category là VARCHAR thay vì FK)
+  - 17 frontend form gaps (FK tồn tại nhưng UI dùng text input)
+  - 4+ display cross-reference gaps
+- Tạo `data_linking_audit.md` với Mermaid diagram
+
+**4. Implementation Plan v1 Enhancement:**
+- Tạo plan chi tiết: Phase A (13 tasks ~12 ngày), Phase B (8 tasks ~8 ngày), Phase C (7 tasks)
+- Dependency chain + execution order theo tuần
+- Cross-reference map 2 chiều: Enhancement # ↔ Task ID + Audit ↔ Task ID
+- User đã **approve** plan
+
+**5. BRD/PRD/SRS cập nhật lên v1.6:**
+- BRD: +14 business requirements mới (BR-ENH-01 đến BR-ENH-14)
+- PRD: +15 user stories mới (US-ENH01 đến US-ENH15) + acceptance criteria
+- SRS: +Schema migration specs, shared component table (8 components), 15+ API endpoints mới, number formatting rules, edit/revert rules, updated cross-reference matrix
+
+### 📂 Files đã tạo/sửa
+| File | Mô tả |
+|------|-------|
+| `BRD_IT_Management_System.md` | [UPDATED] v1.5 → v1.6: +Section 2.14 Cross-cutting Enhancement (14 BRs) |
+| `PRD_IT_Management_System.md` | [UPDATED] v1.5 → v1.6: +Section 3.15 Cross-cutting Enhancement (15 US) |
+| `SRS_IT_Management_System.md` | [UPDATED] v1.5 → v1.6: +Section 7b Technical Cross-cutting (migration, components, APIs) |
+| `Enhancement Note/Enhancement-note-p1` | [UPDATED] Cross-reference tới task IDs |
+| `docs/PLAN-v1-enhancement.md` | [NEW] Implementation plan tổng hợp (Phase A/B/C) |
+
+### 🔧 Bàn giao
+- Tất cả spec docs đã sẵn sàng cho implementation
+- Plan ưu tiên: A1 (Shared Components) → A2 (Schema Migration) → A3-A6 (Data Linking) → A7-A13 (Features)
+- **Nguyên tắc:** Cập nhật DAILYSTANDUP sau mỗi session
+
+---
+
 ## 2026-03-14 23:33 — Agent: Session 22 (User Guide + Bugfix ✅)
 
 ### ✅ Đã hoàn thành

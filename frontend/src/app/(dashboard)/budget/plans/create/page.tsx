@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
 
 interface BudgetItem {
@@ -34,9 +35,7 @@ const emptyCategory = (): BudgetCategory => ({
   items: [emptyItem()],
 });
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("vi-VN").format(value) + "₫";
-}
+
 
 export default function CreateBudgetPlanPage() {
   const router = useRouter();

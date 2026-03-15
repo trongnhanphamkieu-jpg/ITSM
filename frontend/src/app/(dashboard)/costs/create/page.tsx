@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
+import { VendorSelect } from "@/components/shared/vendor-select";
+import { CategorySelect } from "@/components/shared/category-select";
+import { CurrencyInput } from "@/components/shared/currency-input";
+import { FileUpload } from "@/components/shared/file-upload";
 
 interface BudgetItemOption {
   id: string;
@@ -17,13 +21,14 @@ export default function CostCreatePage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [budgetItems, setBudgetItems] = useState<BudgetItemOption[]>([]);
+  const [attachments, setAttachments] = useState<{ id: string; name: string; url: string }[]>([]);
 
   const [form, setForm] = useState({
     categoryName: "",
     description: "",
-    amount: "",
+    amount: 0,
     costDate: new Date().toISOString().split("T")[0],
-    vendor: "",
+    vendorId: "",
     invoiceNo: "",
     note: "",
     budgetItemId: "",
@@ -80,10 +85,11 @@ export default function CostCreatePage() {
         description: form.description,
         amount: Number(form.amount),
         costDate: form.costDate,
-        vendor: form.vendor || undefined,
+        vendorId: form.vendorId || undefined,
         invoiceNo: form.invoiceNo || undefined,
         note: form.note || undefined,
         budgetItemId: form.budgetItemId || undefined,
+        attachmentIds: attachments.map((f) => f.id),
       });
       router.push("/costs");
     } catch {
@@ -115,17 +121,15 @@ export default function CostCreatePage() {
 
       <div className="max-w-2xl">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
-          {/* Category */}
+          {/* Danh mục — CategorySelect */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-card-foreground">
               Danh mục <span className="text-danger">*</span>
             </label>
-            <input
-              type="text"
-              placeholder="Vd: Phần cứng, Phần mềm, Dịch vụ..."
+            <CategorySelect
               value={form.categoryName}
-              onChange={(e) => updateField("categoryName", e.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              onChange={(v) => updateField("categoryName", v)}
+              required
             />
           </div>
 
@@ -147,15 +151,12 @@ export default function CostCreatePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-card-foreground">
-                Số tiền (₫) <span className="text-danger">*</span>
+                Số tiền <span className="text-danger">*</span>
               </label>
-              <input
-                type="number"
-                placeholder="0"
-                min="0"
+              <CurrencyInput
                 value={form.amount}
-                onChange={(e) => updateField("amount", e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                onChange={(raw) => setForm((prev) => ({ ...prev, amount: raw }))}
+                required
               />
             </div>
             <div>
@@ -177,12 +178,9 @@ export default function CostCreatePage() {
               <label className="mb-1.5 block text-sm font-medium text-card-foreground">
                 Nhà cung cấp
               </label>
-              <input
-                type="text"
-                placeholder="Tên nhà cung cấp"
-                value={form.vendor}
-                onChange={(e) => updateField("vendor", e.target.value)}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              <VendorSelect
+                value={form.vendorId}
+                onChange={(v) => updateField("vendorId", v)}
               />
             </div>
             <div>
@@ -222,6 +220,38 @@ export default function CostCreatePage() {
               </p>
             </div>
           )}
+
+          {/* Attachments */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+              Hóa đơn / Chứng từ
+            </label>
+            <FileUpload
+              entityType="actual-cost"
+              onUpload={(file) => setAttachments((prev) => [...prev, { id: file.id, name: file.fileName, url: file.storageKey }])}
+              accept=".pdf,.jpg,.jpeg,.png"
+              maxSizeMb={5}
+            />
+            {attachments.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {attachments.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <i className="bi bi-file-earmark text-muted" />
+                      <span className="text-foreground">{file.name}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttachments((prev) => prev.filter((f) => f.id !== file.id))}
+                      className="text-muted hover:text-danger transition-colors"
+                    >
+                      <i className="bi bi-x-lg" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Note */}
           <div>

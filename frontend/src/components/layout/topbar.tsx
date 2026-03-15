@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 interface TopbarProps {
   onMenuClick: () => void;
@@ -16,16 +17,19 @@ interface Notification {
   createdAt: string;
 }
 
-function timeAgo(date: string) {
-  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (s < 60) return "Vừa xong";
-  if (s < 3600) return `${Math.floor(s / 60)} phút trước`;
-  if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`;
-  return `${Math.floor(s / 86400)} ngày trước`;
-}
+// timeAgo moved inside component to use t()
 
 export function Topbar({ onMenuClick }: TopbarProps) {
+  const { t, locale } = useI18n();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  function timeAgo(date: string) {
+    const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    if (s < 60) return t("time.just_now");
+    if (s < 3600) return t("time.minutes_ago", { count: Math.floor(s / 60) });
+    if (s < 86400) return t("time.hours_ago", { count: Math.floor(s / 3600) });
+    return t("time.days_ago", { count: Math.floor(s / 86400) });
+  }
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -115,7 +119,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           <i className="bi bi-search text-sm text-muted-foreground" />
           <input
             type="text"
-            placeholder="Tìm kiếm..."
+            placeholder={t("topbar.search")}
             className="w-48 bg-transparent text-sm outline-none placeholder:text-muted-foreground lg:w-64"
           />
           <kbd className="hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground md:inline-block">
@@ -145,7 +149,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-card shadow-lg sm:w-96">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <h3 className="text-sm font-semibold text-foreground">
-                  Thông báo
+                  {locale === "en" ? "Notifications" : "Thông báo"}
                   {unreadCount > 0 && (
                     <span className="ml-1.5 inline-flex items-center rounded-full bg-danger/10 px-1.5 py-0.5 text-xs font-medium text-danger">
                       {unreadCount}
@@ -157,7 +161,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                     onClick={markAllRead}
                     className="text-xs font-medium text-primary hover:underline"
                   >
-                    Đọc tất cả
+                    {locale === "en" ? "Read all" : "Đọc tất cả"}
                   </button>
                 )}
               </div>
@@ -165,7 +169,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 py-8">
                     <i className="bi bi-bell-slash text-2xl text-muted" />
-                    <p className="text-sm text-muted">Không có thông báo</p>
+                    <p className="text-sm text-muted">{locale === "en" ? "No notifications" : "Không có thông báo"}</p>
                   </div>
                 ) : (
                   notifications.map((n) => (

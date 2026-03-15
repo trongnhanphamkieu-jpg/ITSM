@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
 import { UserFormDialog } from "./user-form-dialog";
 
 interface User {
@@ -20,7 +23,6 @@ interface User {
 }
 
 interface UsersResponse {
-  success: boolean;
   data: User[];
   meta: { total: number; page: number; limit: number; totalPages: number };
 }
@@ -45,138 +47,80 @@ const STATUS_LABELS: Record<string, string> = {
   inactive: "Ngưng",
 };
 
-// Mock data for UI development (will be replaced by API calls)
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    fullName: "Nguyễn Văn Admin",
-    email: "admin@haivan.com",
-    role: "admin",
-    status: "active",
-    department: "Phòng CNTT",
-    phone: "0901234567",
-    lastLoginAt: "2026-03-14T07:00:00Z",
-    createdAt: "2026-01-01T00:00:00Z",
-  },
-  {
-    id: "2",
-    fullName: "Trần Thị Bình",
-    email: "binh.tt@haivan.com",
-    role: "manager",
-    status: "active",
-    department: "Phòng Tài chính",
-    phone: "0912345678",
-    lastLoginAt: "2026-03-13T15:30:00Z",
-    createdAt: "2026-01-15T00:00:00Z",
-  },
-  {
-    id: "3",
-    fullName: "Lê Minh Cường",
-    email: "cuong.lm@haivan.com",
-    role: "staff",
-    status: "active",
-    department: "Phòng CNTT",
-    lastLoginAt: "2026-03-12T09:00:00Z",
-    createdAt: "2026-02-01T00:00:00Z",
-  },
-  {
-    id: "4",
-    fullName: "Phạm Thị Dung",
-    email: "dung.pt@haivan.com",
-    role: "finance",
-    status: "locked",
-    department: "Phòng Kế toán",
-    createdAt: "2026-02-15T00:00:00Z",
-  },
-  {
-    id: "5",
-    fullName: "Hoàng Văn Em",
-    email: "em.hv@haivan.com",
-    role: "viewer",
-    status: "inactive",
-    department: "Phòng Hành chính",
-    createdAt: "2026-03-01T00:00:00Z",
-  },
+const USER_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: "Họ tên", key: "fullName" },
+  { header: "Email", key: "email" },
+  { header: "Vai trò", key: "role", format: (v: string) => ROLE_LABELS[v] || v },
+  { header: "Phòng ban", key: "department" },
+  { header: "SĐT", key: "phone" },
+  { header: "Trạng thái", key: "status", format: (v: string) => STATUS_LABELS[v] || v },
 ];
-
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
 
 function formatDateTime(dateStr?: string): string {
   if (!dateStr) return "Chưa đăng nhập";
-  const d = new Date(dateStr);
-  return d.toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Date(dateStr).toLocaleString("vi-VN", {
+    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params: any = { page: meta.page, limit: 20 };
+      if (search) params.search = search;
+      const result = await api.get<UsersResponse>("/users", params);
+      setUsers(result.data || []);
+      setMeta(result.meta || { total: 0, page: 1, limit: 20, totalPages: 1 });
+    } catch {
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [meta.page, search]);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
   const filteredUsers = users.filter((u) => {
-    const matchSearch =
-      !search ||
-      u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
     const matchRole = !roleFilter || u.role === roleFilter;
     const matchStatus = !statusFilter || u.status === statusFilter;
-    return matchSearch && matchRole && matchStatus;
+    return matchRole && matchStatus;
   });
 
-  const handleAdd = () => {
-    setEditingUser(null);
-    setDialogOpen(true);
-  };
+  const handleAdd = () => { setEditingUser(null); setDialogOpen(true); };
+  const handleEdit = (user: User) => { setEditingUser(user); setDialogOpen(true); };
 
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    setDialogOpen(true);
-  };
-
-  const handleSave = (userData: Partial<User>) => {
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id ? { ...u, ...userData } : u
-        )
-      );
-    } else {
-      const newUser: User = {
-        id: String(Date.now()),
-        fullName: userData.fullName || "",
-        email: userData.email || "",
-        role: userData.role || "staff",
-        status: "active",
-        department: userData.department,
-        phone: userData.phone,
-        createdAt: new Date().toISOString(),
-      };
-      setUsers((prev) => [newUser, ...prev]);
+  const handleSave = async (userData: Partial<User>) => {
+    try {
+      if (editingUser) {
+        await api.patch(`/users/${editingUser.id}`, userData);
+      } else {
+        await api.post("/users", userData);
+      }
+      setDialogOpen(false);
+      fetchUsers();
+    } catch (e: any) {
+      alert(e.message || "Lỗi khi lưu");
     }
-    setDialogOpen(false);
   };
 
-  const handleDisable = (userId: string) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === userId ? { ...u, status: "inactive" } : u
-      )
-    );
+  const handleDisable = async (userId: string) => {
+    if (!confirm("Vô hiệu hóa người dùng này?")) return;
+    try {
+      await api.delete(`/users/${userId}`);
+      fetchUsers();
+    } catch (e: any) {
+      alert(e.message || "Lỗi");
+    }
   };
 
   return (
@@ -185,13 +129,16 @@ export default function UsersPage() {
         title="Quản lý người dùng"
         description="Danh sách tài khoản hệ thống ITMS"
         actions={
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-colors hover:bg-primary/90"
-          >
-            <i className="bi bi-plus-lg" />
-            Thêm người dùng
-          </button>
+          <div className="flex items-center gap-2">
+            <ExportButton data={filteredUsers} columns={USER_EXPORT_COLUMNS} filename="nguoi_dung" />
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-colors hover:bg-primary/90"
+            >
+              <i className="bi bi-plus-lg" />
+              Thêm người dùng
+            </button>
+          </div>
         }
       />
 
@@ -234,7 +181,9 @@ export default function UsersPage() {
       </div>
 
       {/* Users Table */}
-      {filteredUsers.length === 0 ? (
+      {loading ? (
+        <div className="py-12 text-center text-muted-foreground">Đang tải...</div>
+      ) : filteredUsers.length === 0 ? (
         <EmptyState
           icon="bi-people"
           title="Không tìm thấy người dùng"
@@ -254,82 +203,41 @@ export default function UsersPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Người dùng
-                  </th>
-                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Vai trò
-                  </th>
-                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Phòng ban
-                  </th>
-                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Trạng thái
-                  </th>
-                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Đăng nhập cuối
-                  </th>
-                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    <span className="sr-only">Actions</span>
-                  </th>
+                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Người dùng</th>
+                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Vai trò</th>
+                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Phòng ban</th>
+                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Trạng thái</th>
+                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Đăng nhập cuối</th>
+                  <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-muted-foreground"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="group transition-colors hover:bg-primary/5"
-                  >
+                  <tr key={user.id} className="group transition-colors hover:bg-primary/5">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <UserAvatar name={user.fullName} />
                         <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            {user.fullName}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {user.email}
-                          </p>
+                          <p className="text-sm font-semibold text-foreground">{user.fullName}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4"><span className="text-sm text-foreground">{ROLE_LABELS[user.role] || user.role}</span></td>
+                    <td className="px-6 py-4"><span className="text-sm text-muted-foreground">{user.department || "—"}</span></td>
                     <td className="px-6 py-4">
-                      <span className="text-sm text-foreground">
-                        {ROLE_LABELS[user.role] || user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-muted-foreground">
-                        {user.department || "—"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge
-                        variant={STATUS_VARIANTS[user.status] || "neutral"}
-                      >
+                      <StatusBadge variant={STATUS_VARIANTS[user.status] || "neutral"}>
                         {STATUS_LABELS[user.status] || user.status}
                       </StatusBadge>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-muted-foreground">
-                        {formatDateTime(user.lastLoginAt)}
-                      </span>
-                    </td>
+                    <td className="px-6 py-4"><span className="text-sm text-muted-foreground">{formatDateTime(user.lastLoginAt)}</span></td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          onClick={() => handleEdit(user)}
-                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          title="Chỉnh sửa"
-                        >
+                        <button onClick={() => handleEdit(user)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" title="Chỉnh sửa">
                           <i className="bi bi-pencil-square" />
                         </button>
                         {user.status === "active" && (
-                          <button
-                            onClick={() => handleDisable(user.id)}
-                            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger"
-                            title="Vô hiệu hóa"
-                          >
+                          <button onClick={() => handleDisable(user.id)} className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger" title="Vô hiệu hóa">
                             <i className="bi bi-person-dash" />
                           </button>
                         )}
@@ -341,11 +249,20 @@ export default function UsersPage() {
             </table>
           </div>
 
-          {/* Footer */}
+          {/* Footer with Pagination */}
           <div className="flex items-center justify-between border-t border-border bg-muted/30 px-6 py-3">
             <p className="text-xs text-muted-foreground">
-              Hiển thị {filteredUsers.length} / {users.length} người dùng
+              Hiển thị {filteredUsers.length} / {meta.total} người dùng
             </p>
+            {meta.totalPages > 1 && (
+              <div className="flex gap-2">
+                <button onClick={() => setMeta(p => ({ ...p, page: Math.max(1, p.page - 1) }))} disabled={meta.page <= 1}
+                  className="px-3 py-1 rounded-lg border border-border text-xs hover:bg-muted disabled:opacity-40">← Trước</button>
+                <span className="text-xs text-muted-foreground px-2 py-1">Trang {meta.page}/{meta.totalPages}</span>
+                <button onClick={() => setMeta(p => ({ ...p, page: Math.min(p.totalPages, p.page + 1) }))} disabled={meta.page >= meta.totalPages}
+                  className="px-3 py-1 rounded-lg border border-border text-xs hover:bg-muted disabled:opacity-40">Sau →</button>
+              </div>
+            )}
           </div>
         </div>
       )}

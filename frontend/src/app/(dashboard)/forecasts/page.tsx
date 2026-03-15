@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
+
+const FORECAST_COLUMNS: ExportColumn[] = [
+  { header: "Tháng", key: "month", format: (_: any, r: any) => `T${r.month}/${r.year}` },
+  { header: "Tên", key: "name" },
+  { header: "Tổng dự chi", key: "totalAmount" },
+  { header: "Hạng mục", key: "_count", format: (_: any, r: any) => String(r._count?.items || 0) },
+  { header: "Trạng thái", key: "status" },
+  { header: "Người tạo", key: "createdBy", format: (_: any, r: any) => r.createdBy?.fullName || "" },
+];
+
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   draft: { label: "Nháp", color: "bg-gray-500/20 text-gray-400" },
@@ -86,12 +98,15 @@ export default function ForecastsPage() {
             Lập bảng dự chi, phê duyệt và so sánh vs thực tế
           </p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition whitespace-nowrap"
-        >
-          + Tạo dự chi mới
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton data={forecasts} columns={FORECAST_COLUMNS} filename="du_chi" />
+          <button
+            onClick={() => setShowCreate(true)}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition whitespace-nowrap"
+          >
+            + Tạo dự chi mới
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

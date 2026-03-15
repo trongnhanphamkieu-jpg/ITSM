@@ -3,6 +3,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { VendorSelect } from "@/components/shared/vendor-select";
+import { UserSelect } from "@/components/shared/user-select";
+import { formatCurrency } from "@/lib/utils";
+import { ExportButton } from "@/components/shared/export-button";
+import type { ExportColumn } from "@/components/shared/export-button";
+
+const VEHICLE_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: "Biển số", key: "licensePlate" },
+  { header: "Hãng", key: "brand" },
+  { header: "Model", key: "model" },
+  { header: "Đời", key: "year" },
+  { header: "Loại", key: "type" },
+  { header: "Phụ trách", key: "assignedTo" },
+  { header: "Trạng thái", key: "status" },
+];
+
 
 type TabKey = "vehicles" | "services" | "costs";
 
@@ -49,6 +65,7 @@ export default function VehiclePage() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   const [meta, setMeta] = useState<any>(null);
+  const [editingItem, setEditingItem] = useState<any>(null);
 
   const endpoint = activeTab === "vehicles" ? "/vehicles" : activeTab === "services" ? "/vehicle-services" : "/vehicle-costs";
 
@@ -66,14 +83,40 @@ export default function VehiclePage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post(endpoint, formData);
-      setShowDrawer(false); setFormData({}); fetchData();
+      if (editingItem) {
+        await api.patch(`${endpoint}/${editingItem.id}`, formData);
+      } else {
+        await api.post(endpoint, formData);
+      }
+      setShowDrawer(false); setFormData({}); setEditingItem(null); fetchData();
     } catch (e) { console.error(e); }
     setSubmitting(false);
+  };
+
+  const openEdit = (item: any) => {
+    setEditingItem(item);
+    if (activeTab === "vehicles") {
+      setFormData({
+        licensePlate: item.licensePlate, brand: item.brand, model: item.model,
+        vendorId: item.vendorId || "", year: item.year, type: item.type,
+        assignedTo: item.assignedTo || "", status: item.status,
+      });
+    } else if (activeTab === "services") {
+      setFormData({
+        name: item.name, costType: item.costType, frequency: item.frequency,
+        defaultCost: item.defaultCost, description: item.description || "",
+      });
+    }
+    setShowDrawer(true);
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (!confirm("Xóa mục này?")) return;
+    try { await api.delete(`${endpoint}/${itemId}`); fetchData(); } catch {}
   };
 
   const renderVehiclesTable = () => (
@@ -86,10 +129,11 @@ export default function VehiclePage() {
         <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase">Phụ trách</th>
         <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase">DV gắn</th>
         <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase">Trạng thái</th>
+        <th className="px-4 py-3 text-center font-semibold text-foreground/70 text-xs uppercase">Thao tác</th>
       </tr></thead>
       <tbody>
         {data.length === 0 ? (
-          <tr><td colSpan={7} className="py-12 text-center text-muted"><i className="bi bi-inbox text-3xl block mb-2" />Chưa có dữ liệu</td></tr>
+          <tr><td colSpan={8} className="py-12 text-center text-muted"><i className="bi bi-inbox text-3xl block mb-2" />Chưa có dữ liệu</td></tr>
         ) : data.map((item: any) => (
           <tr key={item.id} onClick={() => router.push(`/vehicles/${item.id}`)}
             className="border-b border-border/50 hover:bg-accent/20 transition-colors cursor-pointer">
@@ -100,6 +144,10 @@ export default function VehiclePage() {
             <td className="px-4 py-3 text-foreground">{item.assignedTo || "—"}</td>
             <td className="px-4 py-3 text-foreground">{item._count?.subscriptions || 0}</td>
             <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+            <td className="px-4 py-3 text-center">
+              <button onClick={(e) => { e.stopPropagation(); openEdit(item); }} className="rounded p-1 text-gray-400 hover:text-primary hover:bg-primary/5" title="Sửa"><i className="bi bi-pencil" /></button>
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 ml-1" title="Xóa"><i className="bi bi-trash" /></button>
+            </td>
           </tr>
         ))}
       </tbody>
@@ -114,10 +162,11 @@ export default function VehiclePage() {
         <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase">Tần suất</th>
         <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase">Giá mặc định</th>
         <th className="px-4 py-3 text-left font-semibold text-foreground/70 text-xs uppercase">Trạng thái</th>
+        <th className="px-4 py-3 text-center font-semibold text-foreground/70 text-xs uppercase">Thao tác</th>
       </tr></thead>
       <tbody>
         {data.length === 0 ? (
-          <tr><td colSpan={5} className="py-12 text-center text-muted"><i className="bi bi-inbox text-3xl block mb-2" />Chưa có dữ liệu</td></tr>
+          <tr><td colSpan={6} className="py-12 text-center text-muted"><i className="bi bi-inbox text-3xl block mb-2" />Chưa có dữ liệu</td></tr>
         ) : data.map((item: any) => (
           <tr key={item.id} className="border-b border-border/50 hover:bg-accent/20 transition-colors">
             <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
@@ -125,6 +174,10 @@ export default function VehiclePage() {
             <td className="px-4 py-3 text-foreground">{FREQ_MAP[item.frequency] || item.frequency}</td>
             <td className="px-4 py-3 text-foreground">{item.defaultCost ? Number(item.defaultCost).toLocaleString("vi-VN") + " ₫" : "—"}</td>
             <td className="px-4 py-3 text-foreground">{item.isActive ? "✅ Active" : "❌ Inactive"}</td>
+            <td className="px-4 py-3 text-center">
+              <button onClick={() => openEdit(item)} className="rounded p-1 text-gray-400 hover:text-primary hover:bg-primary/5" title="Sửa"><i className="bi bi-pencil" /></button>
+              <button onClick={() => handleDelete(item.id)} className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 ml-1" title="Xóa"><i className="bi bi-trash" /></button>
+            </td>
           </tr>
         ))}
       </tbody>
@@ -171,6 +224,13 @@ export default function VehiclePage() {
           </div>
         ))}
         <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Nhà cung cấp</label>
+          <VendorSelect
+            value={formData.vendorId || ""}
+            onChange={(v) => setFormData({ ...formData, vendorId: v })}
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-foreground mb-1">Năm SX</label>
           <input type="number" value={formData.year || ""} onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) || undefined })}
             className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
@@ -185,8 +245,10 @@ export default function VehiclePage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Người phụ trách</label>
-          <input type="text" value={formData.assignedTo || ""} onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
+          <UserSelect
+            value={formData.assignedTo || ""}
+            onChange={(v) => setFormData({ ...formData, assignedTo: v })}
+          />
         </div>
       </>
     );
@@ -236,12 +298,15 @@ export default function VehiclePage() {
           <h1 className="text-2xl font-bold text-foreground">Chi phí xe</h1>
           <p className="text-muted mt-1">Quản lý phương tiện, dịch vụ cố định & biến đổi</p>
         </div>
-        {activeTab !== "costs" && (
-          <button onClick={() => { setShowDrawer(true); setFormData(activeTab === "services" ? { costType: "fixed", frequency: "monthly" } : {}); }}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
-            <i className="bi bi-plus-lg" /> Thêm mới
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <ExportButton data={data} columns={VEHICLE_EXPORT_COLUMNS} filename={`xe_${activeTab}`} />
+          {activeTab !== "costs" && (
+            <button onClick={() => { setShowDrawer(true); setEditingItem(null); setFormData(activeTab === "services" ? { costType: "fixed", frequency: "monthly" } : {}); }}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
+              <i className="bi bi-plus-lg" /> Thêm mới
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto rounded-xl bg-card p-1 shadow-sm border border-border">
@@ -293,15 +358,15 @@ export default function VehiclePage() {
           <div className="relative w-full max-w-md bg-card shadow-2xl overflow-y-auto">
             <div className="sticky top-0 bg-card border-b border-border px-6 py-4 z-10">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-foreground">Thêm {tabLabels[activeTab]}</h2>
-                <button onClick={() => setShowDrawer(false)} className="text-muted hover:text-foreground"><i className="bi bi-x-lg text-xl" /></button>
+                <h2 className="text-lg font-semibold text-foreground">{editingItem ? "Chỉnh sửa" : "Thêm"} {tabLabels[activeTab]}</h2>
+                <button onClick={() => { setShowDrawer(false); setEditingItem(null); }} className="text-muted hover:text-foreground"><i className="bi bi-x-lg text-xl" /></button>
               </div>
             </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {renderCreateFields()}
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setShowDrawer(false)} className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent transition-colors">Hủy</button>
-                <button type="submit" disabled={submitting} className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">{submitting ? "Đang lưu..." : "Tạo mới"}</button>
+                <button type="button" onClick={() => { setShowDrawer(false); setEditingItem(null); }} className="flex-1 rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-accent transition-colors">Hủy</button>
+                <button type="submit" disabled={submitting} className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">{submitting ? "Đang lưu..." : editingItem ? "Cập nhật" : "Tạo mới"}</button>
               </div>
             </form>
           </div>

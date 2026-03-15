@@ -4,45 +4,59 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
+import { LanguageSwitch, useI18n } from "@/lib/i18n";
 
-const NAV_ITEMS = [
+interface NavItem {
+  labelKey: string;
+  href: string;
+  icon: string;
+}
+
+interface NavGroup {
+  groupKey: string;
+  items: NavItem[];
+}
+
+const NAV_ITEMS: NavGroup[] = [
   {
-    group: "TỔNG QUAN",
+    groupKey: "nav.group.overview",
     items: [
-      { label: "Dashboard", href: "/", icon: "bi-speedometer2" },
+      { labelKey: "nav.dashboard", href: "/", icon: "bi-speedometer2" },
     ],
   },
   {
-    group: "NGÂN SÁCH",
+    groupKey: "nav.group.budget",
     items: [
-      { label: "Kế hoạch ngân sách", href: "/budget/plans", icon: "bi-wallet2" },
-      { label: "Chi phí thực tế", href: "/costs", icon: "bi-cash-stack" },
-      { label: "Dự chi", href: "/forecasts", icon: "bi-graph-up-arrow" },
-      { label: "Ngân sách dự án", href: "/projects", icon: "bi-folder" },
+      { labelKey: "nav.budget_plans", href: "/budget/plans", icon: "bi-wallet2" },
+      { labelKey: "nav.costs", href: "/costs", icon: "bi-cash-stack" },
+      { labelKey: "nav.forecasts", href: "/forecasts", icon: "bi-graph-up-arrow" },
+      { labelKey: "nav.projects", href: "/projects", icon: "bi-folder" },
     ],
   },
   {
-    group: "TÀI SẢN",
+    groupKey: "nav.group.assets",
     items: [
-      { label: "NCC & Hợp đồng", href: "/vendors", icon: "bi-building" },
-      { label: "Phần mềm", href: "/inventory/soft", icon: "bi-laptop" },
-      { label: "Phần cứng", href: "/inventory/hard", icon: "bi-pc-display" },
-      { label: "Hạ tầng", href: "/infrastructure", icon: "bi-diagram-3" },
+      { labelKey: "nav.vendors", href: "/vendors", icon: "bi-building" },
+      { labelKey: "nav.soft_inventory", href: "/inventory/soft", icon: "bi-laptop" },
+      { labelKey: "nav.hard_inventory", href: "/inventory/hard", icon: "bi-pc-display" },
+      { labelKey: "nav.infrastructure", href: "/infrastructure", icon: "bi-diagram-3" },
     ],
   },
   {
-    group: "VẬN HÀNH",
+    groupKey: "nav.group.operations",
     items: [
-      { label: "Chi phí xe", href: "/vehicles", icon: "bi-truck" },
-      { label: "Báo cáo", href: "/reports", icon: "bi-bar-chart-line" },
-      { label: "Nhật ký", href: "/activity-log", icon: "bi-journal-text" },
+      { labelKey: "nav.vehicles", href: "/vehicles", icon: "bi-truck" },
+      { labelKey: "nav.reports", href: "/reports", icon: "bi-bar-chart-line" },
+      { labelKey: "nav.activity_log", href: "/activity-log", icon: "bi-journal-text" },
     ],
   },
   {
-    group: "HỆ THỐNG",
+    groupKey: "nav.group.system",
     items: [
-      { label: "Cấu hình", href: "/settings/config", icon: "bi-gear" },
-      { label: "Người dùng", href: "/settings/users", icon: "bi-people" },
+      { labelKey: "nav.config", href: "/settings/config", icon: "bi-gear" },
+      { labelKey: "nav.security", href: "/settings/security", icon: "bi-shield-lock" },
+      { labelKey: "nav.users", href: "/settings/users", icon: "bi-people" },
     ],
   },
 ];
@@ -54,6 +68,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <>
@@ -87,9 +102,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {NAV_ITEMS.map((group) => (
-            <div key={group.group} className="mb-6">
+            <div key={group.groupKey} className="mb-6">
               <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-                {group.group}
+                {t(group.groupKey)}
               </p>
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
@@ -116,7 +131,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                             isActive && "text-sidebar-primary"
                           )}
                         />
-                        {item.label}
+                        {t(item.labelKey)}
                       </Link>
                     </li>
                   );
@@ -127,8 +142,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-sidebar-border p-4">
-          <p className="text-xs text-sidebar-foreground/40">ITMS v1.0 — 2026</p>
+        <div className="flex items-center justify-between border-t border-sidebar-border p-4">
+          <p className="text-xs text-sidebar-foreground/40">ITMS v1.0</p>
+          <div className="flex items-center gap-1">
+            <LanguageSwitch />
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
     </>

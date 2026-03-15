@@ -8,7 +8,7 @@ function fmt(n: number) {
   return new Intl.NumberFormat("vi-VN").format(n) + "₫";
 }
 
-type ReportTab = "budget" | "cost" | "asset" | "project";
+type ReportTab = "budget" | "cost" | "asset" | "project" | "vehicle" | "contract";
 
 export default function ReportsPage() {
   const [tab, setTab] = useState<ReportTab>("budget");
@@ -33,6 +33,12 @@ export default function ReportsPage() {
         case "project":
           result = await api.get("/reports/project-budget", { year });
           break;
+        case "vehicle":
+          try { result = await api.get("/vehicles", { limit: 100 }); } catch { result = { data: [] }; }
+          break;
+        case "contract":
+          try { result = await api.get("/contracts", { limit: 100 }); } catch { result = { data: [] }; }
+          break;
       }
       setData(result);
     } catch {
@@ -49,6 +55,8 @@ export default function ReportsPage() {
     { key: "cost", label: "Chi phí so sánh", icon: "📊" },
     { key: "asset", label: "Tổng quan tài sản", icon: "🏢" },
     { key: "project", label: "Ngân sách dự án", icon: "📁" },
+    { key: "vehicle", label: "Phương tiện", icon: "🚗" },
+    { key: "contract", label: "Hợp đồng", icon: "📝" },
   ];
 
   return (
@@ -58,7 +66,7 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold text-foreground">📈 Báo cáo tổng hợp</h1>
           <p className="text-sm text-muted-foreground mt-1">Phân tích ngân sách, chi phí, tài sản và dự án</p>
         </div>
-        {tab !== "asset" && (
+        {tab !== "asset" && tab !== "vehicle" && tab !== "contract" && (
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}
             className="px-3 py-2 bg-card border border-border rounded-lg text-sm">
             {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>Năm {y}</option>)}
@@ -255,6 +263,100 @@ export default function ReportsPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* === VEHICLE REPORT === */}
+          {tab === "vehicle" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {["active", "maintenance", "inactive"].map(st => {
+                  const count = (data?.data || data || []).filter?.((v: any) => v.status === st)?.length || 0;
+                  return (
+                    <div key={st} className="bg-card rounded-xl border border-border p-4">
+                      <p className="text-xs text-muted-foreground font-semibold uppercase">{st === "active" ? "Đang SD" : st === "maintenance" ? "Bảo dưỡng" : "Ngưng"}</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">{count}</p>
+                    </div>
+                  );
+                })}
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Tổng</p>
+                  <p className="text-2xl font-bold text-primary mt-1">{(data?.data || data || []).length}</p>
+                </div>
+              </div>
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">BIỂN SỐ</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">HÃNG / MODEL</th>
+                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">LOẠI</th>
+                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">TRẠNG THÁI</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">NGƯỜI DÙNG</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-border">
+                    {(data?.data || data || []).map?.((v: any) => (
+                      <tr key={v.id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3 font-mono text-primary">{v.licensePlate}</td>
+                        <td className="px-4 py-3 text-foreground">{v.brand} {v.model}</td>
+                        <td className="px-4 py-3 text-center text-muted-foreground">{v.vehicleType}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${v.status === "active" ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400"}`}>
+                            {v.status === "active" ? "Đang SD" : v.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{v.assignedTo || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* === CONTRACT REPORT === */}
+          {tab === "contract" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {["active", "draft", "expired", "terminated"].map(st => {
+                  const count = (data?.data || data || []).filter?.((c: any) => c.status === st)?.length || 0;
+                  return (
+                    <div key={st} className="bg-card rounded-xl border border-border p-4">
+                      <p className="text-xs text-muted-foreground font-semibold uppercase">{st === "active" ? "Hiệu lực" : st === "draft" ? "Nháp" : st === "expired" ? "Hết hạn" : "Chấm dứt"}</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">{count}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">MÃ HĐ</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">TÊN</th>
+                    <th className="px-4 py-3 text-left font-semibold text-muted-foreground">NHÀ CUNG CẤP</th>
+                    <th className="px-4 py-3 text-right font-semibold text-muted-foreground">GIÁ TRỊ</th>
+                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">THỜI HẠN</th>
+                    <th className="px-4 py-3 text-center font-semibold text-muted-foreground">TRẠNG THÁI</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-border">
+                    {(data?.data || data || []).map?.((c: any) => (
+                      <tr key={c.id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3 font-mono text-primary">{c.code || c.contractNumber}</td>
+                        <td className="px-4 py-3 text-foreground font-medium">{c.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{c.vendor?.name || "—"}</td>
+                        <td className="px-4 py-3 text-right text-amber-400 font-medium">{fmt(Number(c.value || c.totalValue || 0))}</td>
+                        <td className="px-4 py-3 text-center text-sm text-muted-foreground">
+                          {c.startDate ? new Date(c.startDate).toLocaleDateString("vi-VN") : "—"} — {c.endDate ? new Date(c.endDate).toLocaleDateString("vi-VN") : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.status === "active" ? "bg-emerald-500/20 text-emerald-400" : c.status === "expired" ? "bg-red-500/20 text-red-400" : "bg-gray-500/20 text-gray-400"}`}>
+                            {c.status === "active" ? "Hiệu lực" : c.status === "expired" ? "Hết hạn" : c.status === "terminated" ? "Chấm dứt" : "Nháp"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

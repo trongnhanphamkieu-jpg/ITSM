@@ -1,9 +1,10 @@
 # PRD – TÀI LIỆU YÊU CẦU SẢN PHẨM
 ## Hệ thống Quản trị Công nghệ Thông tin Nội bộ (IT Management System – ITMS)
 
-**Phiên bản:** 1.5  
+**Phiên bản:** 1.6  
 **Ngày lập:** 13/03/2026  
-**Cập nhật:** 14/03/2026 – Redesign Module 10: Vehicle Cost → subscription model (fixed/variable, costType, vehicle detail page)  
+**Cập nhật:** 15/03/2026 – v1.6: Bổ sung user stories liên kết dữ liệu xuyên module, file upload, quản lý trạng thái HĐ, format số tiền, dashboard nâng cao, edit/revert, export  
+**Lịch sử:** 14/03 v1.5 – Redesign Module 10 Vehicle Cost subscription model  
 **Product Owner:** IT Manager  
 **Trạng thái:** Bản nháp
 
@@ -248,6 +249,28 @@ ITMS là nền tảng quản trị IT tập trung, cho phép bộ phận công n
 
 ---
 
+### 3.15 Cross-cutting Enhancement (Liên kết dữ liệu & UX v1.6)
+
+| Story ID | User Story | Priority | Điều kiện chấp nhận |
+|----------|-----------|----------|---------------------|
+| US-ENH01 | Là IT Staff, tôi muốn chọn NCC từ dropdown khi nhập chi phí, tài sản, dự chi | Must Have | Tất cả trường NCC là dropdown load từ `/vendors`; không có text input tự do |
+| US-ENH02 | Là IT Staff, tôi muốn liên kết tài sản (email, domain, VPS, license, SSL, phần cứng) với NCC và Hợp đồng | Must Have | Form tạo/sửa tài sản có VendorSelect + ContractSelect (cascade theo NCC) |
+| US-ENH03 | Là IT Manager, tôi muốn gắn hạng mục ngân sách với dự án bằng dropdown | Must Have | Budget item có ProjectSelect dropdown chọn dự án |
+| US-ENH04 | Là IT Staff, tôi muốn chọn hạng mục chi phí từ dropdown thay vì gõ text | Must Have | CategorySelect dropdown; danh mục quản lý tập trung |
+| US-ENH05 | Là IT Admin, tôi muốn gán thiết bị/IP cho nhân viên bằng dropdown thay vì gõ tên | Should Have | UserSelect dropdown tại trường "assigned to" |
+| US-ENH06 | Là IT Staff, tôi muốn upload file đính kèm cho NCC, Hợp đồng, Chi phí | Must Have | Drag-drop upload, lưu MinIO, xem/download/xóa file |
+| US-ENH07 | Là IT Manager, tôi muốn chuyển trạng thái hợp đồng (Draft → Active → Expired → Terminated) | Must Have | Status badge + dropdown đổi trạng thái với validation |
+| US-ENH08 | Là người dùng, tôi muốn số tiền tự động ngăn cách dấu chấm khi nhập | Must Have | `CurrencyInput` auto-format 1.000.000; lưu raw number |
+| US-ENH09 | Là IT Manager, tôi muốn lọc Dashboard theo tháng/quý | Must Have | Date picker chọn tháng/quý; tất cả widget cập nhật theo |
+| US-ENH10 | Là IT Manager, tôi muốn xem cảnh báo HĐ/domain/license sắp hết hạn trên Dashboard | Must Have | Alert widget liệt kê items hết hạn trong 30/60/90 ngày |
+| US-ENH11 | Là IT Staff, tôi muốn chọn ngân sách 2 bước: Plan → Item khi nhập chi phí | Must Have | Cascade select: chọn Budget Plan → hiển thị Items của Plan đó |
+| US-ENH12 | Là Admin, tôi muốn chuyển ngân sách đã duyệt về "Nháp" để sửa | Must Have | Nút "Revert to Draft" chỉ hiện với Admin; ghi audit log |
+| US-ENH13 | Là người dùng, tôi muốn edit bất kỳ dữ liệu nào trong hệ thống | Must Have | Mọi entity có nút Edit; form edit reuse create form với pre-fill |
+| US-ENH14 | Là Finance, tôi muốn xuất Excel tại module Ngân sách, Tài sản, Vận hành | Must Have | Nút Export tại mọi danh sách; file đầy đủ cột, có timestamp |
+| US-ENH15 | Là IT Admin, tôi muốn lọc tài sản theo NCC và trạng thái | Must Have | Filter bar có VendorSelect + StatusSelect tại Soft/Hard Inventory |
+
+---
+
 ## 4. LUỒNG MÀN HÌNH (SCREEN FLOWS)
 
 ### 4.1 Navigation Structure
@@ -383,6 +406,10 @@ Mỗi màn hình danh sách (list view) đều có:
 - Không có lỗi nghiêm trọng (P0, P1) khi go-live
 - Hiệu năng đạt tiêu chí NFR
 - Dự chi được lập và phê duyệt hàng tháng; so sánh dự chi vs thực tế chính xác
+- **Tất cả trường NCC là dropdown liên kết — không có text input tự do (US-ENH01)**
+- **Tài sản phần mềm/phần cứng liên kết với NCC và Hợp đồng (US-ENH02)**
+- **Số tiền nhập/hiển thị đúng định dạng ngăn cách hàng nghìn (US-ENH08)**
+- **Mọi entity đều có chức năng edit (US-ENH13)**
 
 ---
 

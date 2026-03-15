@@ -258,6 +258,29 @@ export class BudgetService {
     return { success: true, data: updated };
   }
 
+  async revertToDraft(id: string) {
+    const plan = await this.prisma.budgetPlan.findUnique({
+      where: { id },
+    });
+    if (!plan)
+      throw new NotFoundException('Kế hoạch ngân sách không tồn tại');
+    if (plan.status === 'draft')
+      throw new BadRequestException('Kế hoạch đã ở trạng thái Nháp');
+
+    const updated = await this.prisma.budgetPlan.update({
+      where: { id },
+      data: {
+        status: 'draft',
+        approvedById: null,
+        approvedAt: null,
+        rejectionNote: null,
+      },
+      include: PLAN_INCLUDE,
+    });
+
+    return { success: true, data: updated };
+  }
+
   // ── Helpers ──
 
   private async getById(id: string) {

@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { VendorSelect } from "@/components/shared/vendor-select";
+import { ContractSelect } from "@/components/shared/contract-select";
+import { ExportButton } from "@/components/shared/export-button";
 
-type TabKey = "email" | "domain" | "vps" | "license" | "ssl";
+type TabKey = "email" | "domain" | "vps" | "license" | "ssl" | "apikey";
 
 interface TabConfig {
   key: TabKey;
@@ -29,7 +32,9 @@ const TABS: TabConfig[] = [
     ],
     createFields: [
       { key: "email", label: "Email", type: "text", required: true },
-      { key: "provider", label: "Nhà cung cấp", type: "text", required: true },
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "contractId", label: "Hợp đồng", type: "contract-select" },
+      { key: "provider", label: "Provider (tham khảo)", type: "text" },
       { key: "quotaMb", label: "Dung lượng (MB)", type: "number" },
       { key: "assignedTo", label: "Gán cho", type: "text" },
       { key: "notes", label: "Ghi chú", type: "textarea" },
@@ -49,7 +54,9 @@ const TABS: TabConfig[] = [
     ],
     createFields: [
       { key: "domain", label: "Tên miền", type: "text", required: true },
-      { key: "registrar", label: "Nhà đăng ký", type: "text" },
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "contractId", label: "Hợp đồng", type: "contract-select" },
+      { key: "registrar", label: "Nhà đăng ký (tham khảo)", type: "text" },
       { key: "nameservers", label: "Nameservers", type: "text" },
       { key: "registrationDate", label: "Ngày đăng ký", type: "date" },
       { key: "expiryDate", label: "Ngày hết hạn", type: "date" },
@@ -73,7 +80,9 @@ const TABS: TabConfig[] = [
     createFields: [
       { key: "hostname", label: "Hostname", type: "text", required: true },
       { key: "ipAddress", label: "Địa chỉ IP", type: "text" },
-      { key: "provider", label: "Nhà cung cấp", type: "text" },
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "contractId", label: "Hợp đồng", type: "contract-select" },
+      { key: "provider", label: "Provider (tham khảo)", type: "text" },
       { key: "os", label: "Hệ điều hành", type: "text" },
       { key: "cpu", label: "CPU", type: "text" },
       { key: "ramGb", label: "RAM (GB)", type: "number" },
@@ -98,7 +107,9 @@ const TABS: TabConfig[] = [
     ],
     createFields: [
       { key: "name", label: "Tên phần mềm", type: "text", required: true },
-      { key: "publisher", label: "Nhà phát hành", type: "text" },
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "contractId", label: "Hợp đồng", type: "contract-select" },
+      { key: "publisher", label: "Nhà phát hành (tham khảo)", type: "text" },
       { key: "licenseKey", label: "License Key", type: "text" },
       { key: "licenseType", label: "Loại license", type: "select", options: [
         { value: "subscription", label: "Đăng ký" },
@@ -128,7 +139,9 @@ const TABS: TabConfig[] = [
     ],
     createFields: [
       { key: "domain", label: "Domain", type: "text", required: true },
-      { key: "issuer", label: "Nhà cung cấp SSL", type: "text" },
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "contractId", label: "Hợp đồng", type: "contract-select" },
+      { key: "issuer", label: "Nhà cung cấp SSL (tham khảo)", type: "text" },
       { key: "sslType", label: "Loại SSL", type: "select", options: [
         { value: "DV", label: "DV (Domain)" },
         { value: "OV", label: "OV (Organization)" },
@@ -140,6 +153,34 @@ const TABS: TabConfig[] = [
       { key: "expiryDate", label: "Ngày hết hạn", type: "date" },
       { key: "autoRenew", label: "Tự động gia hạn", type: "checkbox" },
       { key: "notes", label: "Ghi chú", type: "textarea" },
+    ],
+  },
+  {
+    key: "apikey",
+    label: "API Keys",
+    icon: "bi-key",
+    endpoint: "/soft-inventory/software-licenses",
+    columns: [
+      { key: "name", label: "Tên API/Service" },
+      { key: "publisher", label: "Provider" },
+      { key: "licenseKey", label: "API Key", render: (i: any) => i.licenseKey ? `${i.licenseKey.substring(0, 8)}${'*'.repeat(16)}` : "—" },
+      { key: "licenseType", label: "Loại", render: (i: any) => ({ subscription: "Đăng ký", perpetual: "Vĩnh viễn", trial: "Dùng thử", oem: "OEM" }[i.licenseType as string] || i.licenseType) },
+      { key: "expiryDate", label: "Hết hạn", render: (i: any) => i.expiryDate ? new Date(i.expiryDate).toLocaleDateString("vi-VN") : "—" },
+      { key: "status", label: "Trạng thái" },
+    ],
+    createFields: [
+      { key: "name", label: "Tên API/Service", type: "text", required: true },
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "publisher", label: "Provider (tham khảo)", type: "text" },
+      { key: "licenseKey", label: "API Key / Token", type: "text", required: true },
+      { key: "licenseType", label: "Loại", type: "select", options: [
+        { value: "subscription", label: "Đăng ký" },
+        { value: "perpetual", label: "Vĩnh viễn" },
+        { value: "trial", label: "Dùng thử" },
+      ]},
+      { key: "seats", label: "Rate limit/quota", type: "number" },
+      { key: "expiryDate", label: "Ngày hết hạn", type: "date" },
+      { key: "notes", label: "Ghi chú (scope, env...)", type: "textarea" },
     ],
   },
 ];
@@ -236,12 +277,19 @@ export default function SoftInventoryPage() {
           <h1 className="text-2xl font-bold text-foreground">Phần mềm & Dịch vụ</h1>
           <p className="text-muted mt-1">Quản lý tài khoản email, tên miền, VPS, bản quyền phần mềm, chứng chỉ SSL</p>
         </div>
-        <button
-          onClick={() => { setShowDrawer(true); setFormData({}); }}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
-        >
-          <i className="bi bi-plus-lg" /> Thêm mới
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            data={data}
+            columns={tab.columns.map(c => ({ header: c.label, key: c.key, format: c.render ? (_: any, row: any) => c.render!(row) : undefined }))}
+            filename={`phan_mem_${activeTab}`}
+          />
+          <button
+            onClick={() => { setShowDrawer(true); setFormData({}); }}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            <i className="bi bi-plus-lg" /> Thêm mới
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -367,7 +415,18 @@ export default function SoftInventoryPage() {
                   <label className="block text-sm font-medium text-foreground mb-1">
                     {field.label} {field.required && <span className="text-destructive">*</span>}
                   </label>
-                  {field.type === "textarea" ? (
+                  {field.type === "vendor-select" ? (
+                    <VendorSelect
+                      value={formData[field.key] || ""}
+                      onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                    />
+                  ) : field.type === "contract-select" ? (
+                    <ContractSelect
+                      value={formData[field.key] || ""}
+                      onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                      vendorId={formData.vendorId || undefined}
+                    />
+                  ) : field.type === "textarea" ? (
                     <textarea
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                       rows={3}

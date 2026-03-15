@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { api } from "@/lib/api";
+import { VendorSelect } from "@/components/shared/vendor-select";
+import { ContractSelect } from "@/components/shared/contract-select";
+import { UserSelect } from "@/components/shared/user-select";
+import { ExportButton } from "@/components/shared/export-button";
 
 type TabKey = "hardware" | "infra" | "ip";
 
@@ -44,11 +48,13 @@ const TABS: TabConfig[] = [
         { value: "peripheral", label: "Phụ kiện" },
         { value: "other", label: "Khác" },
       ]},
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
+      { key: "contractId", label: "Hợp đồng", type: "contract-select" },
       { key: "brand", label: "Thương hiệu", type: "text" },
       { key: "model", label: "Model", type: "text" },
       { key: "serialNumber", label: "Số serial", type: "text" },
       { key: "location", label: "Vị trí", type: "text" },
-      { key: "assignedTo", label: "Gán cho", type: "text" },
+      { key: "assignedTo", label: "Gán cho", type: "user-select" },
       { key: "cost", label: "Giá trị (VND)", type: "number" },
       { key: "notes", label: "Ghi chú", type: "textarea" },
     ],
@@ -81,6 +87,7 @@ const TABS: TabConfig[] = [
         { value: "cable_tray", label: "Máng cáp" },
         { value: "other", label: "Khác" },
       ]},
+      { key: "vendorId", label: "Nhà cung cấp", type: "vendor-select" },
       { key: "brand", label: "Thương hiệu", type: "text" },
       { key: "model", label: "Model", type: "text" },
       { key: "serialNumber", label: "Serial", type: "text" },
@@ -116,7 +123,7 @@ const TABS: TabConfig[] = [
         { value: "dhcp", label: "DHCP" },
         { value: "reserved", label: "Reserved" },
       ]},
-      { key: "assignedTo", label: "Gán cho", type: "text" },
+      { key: "assignedTo", label: "Gán cho", type: "user-select" },
       { key: "assignedType", label: "Loại thiết bị", type: "select", options: [
         { value: "hardware", label: "Phần cứng" },
         { value: "infra", label: "Hạ tầng" },
@@ -230,12 +237,19 @@ export default function HardInventoryPage() {
           <h1 className="text-2xl font-bold text-foreground">Phần cứng & Hạ tầng</h1>
           <p className="text-muted mt-1">Quản lý thiết bị phần cứng, hạ tầng mạng và địa chỉ IP</p>
         </div>
-        <button
-          onClick={() => { setShowDrawer(true); setFormData({}); }}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
-        >
-          <i className="bi bi-plus-lg" /> Thêm mới
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            data={data}
+            columns={tab.columns.map(c => ({ header: c.label, key: c.key, format: c.render ? (_: any, row: any) => c.render!(row) : undefined }))}
+            filename={`phan_cung_${activeTab}`}
+          />
+          <button
+            onClick={() => { setShowDrawer(true); setFormData({}); }}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            <i className="bi bi-plus-lg" /> Thêm mới
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -357,7 +371,23 @@ export default function HardInventoryPage() {
                   <label className="block text-sm font-medium text-foreground mb-1">
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                   </label>
-                  {field.type === "select" ? (
+                  {field.type === "vendor-select" ? (
+                    <VendorSelect
+                      value={formData[field.key] || ""}
+                      onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                    />
+                  ) : field.type === "contract-select" ? (
+                    <ContractSelect
+                      value={formData[field.key] || ""}
+                      onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                      vendorId={formData.vendorId || undefined}
+                    />
+                  ) : field.type === "user-select" ? (
+                    <UserSelect
+                      value={formData[field.key] || ""}
+                      onChange={(v) => setFormData({ ...formData, [field.key]: v })}
+                    />
+                  ) : field.type === "select" ? (
                     <select
                       value={formData[field.key] || ""}
                       onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
