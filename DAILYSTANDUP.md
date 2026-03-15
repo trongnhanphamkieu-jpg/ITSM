@@ -8,7 +8,36 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
-## 2026-03-16 01:30 — Agent: Session 44 (V2 Comprehensive Audit + Dashboard Widgets ✅)
+## 2026-03-16 01:45 — Agent: Session 45 (Wave A: RBAC Core ✅)
+
+### Hoàn thành
+- **Backend**:
+  - `PermissionGuard` + `@RequirePermission(module, action)` decorator
+  - `GET /auth/me/permissions` endpoint (dynamic role + legacy fallback)
+  - Registered in `AuthModule`
+- **Frontend**:
+  - `permission-store.ts` (zustand) với `usePermissions()` hook
+  - `<PermissionGate>` component
+  - Dynamic sidebar (15 nav items filtered by `canView`)
+  - `AuthGuard` tự fetch permissions khi login
+
+### Kiểm chứng
+- ✅ Backend build: 0 errors
+- ✅ Frontend build: 0 errors  
+- ✅ Jest: 232/232 tests pass
+- ✅ GitHub push: `0783f03`
+
+### Files changed (9)
+- `backend/src/auth/guards/permission.guard.ts` [NEW]
+- `backend/src/auth/auth.service.ts` — +`getMyPermissions()`
+- `backend/src/auth/auth.controller.ts` — +`GET me/permissions`
+- `backend/src/auth/auth.module.ts` — +`PermissionGuard`
+- `frontend/src/lib/permission-store.ts` [NEW]
+- `frontend/src/components/shared/permission-gate.tsx` [NEW]
+- `frontend/src/components/layout/sidebar.tsx` — dynamic filtering
+- `frontend/src/components/auth/auth-guard.tsx` — permission fetch
+
+---
 
 ### Hoàn thành
 - **Đánh giá toàn bộ Wave 2**: Kiểm tra chi tiết 97 tasks trong TASKS-itsm-v2.md vs code thực tế

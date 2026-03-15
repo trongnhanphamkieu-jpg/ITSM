@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 import { MasterDataSelect } from "@/components/shared";
 
 interface User {
@@ -35,6 +36,17 @@ export function UserFormDialog({
     phone: "",
     status: "active",
   });
+
+  const [dynamicRoles, setDynamicRoles] = useState<{ id: string; code: string; name: string; isSystem: boolean; isActive: boolean }[]>([]);
+
+  useEffect(() => {
+    api.get<any[]>("/rbac/roles")
+      .then((res) => {
+        const roles = (Array.isArray(res) ? res : []).filter((r: any) => r.isActive);
+        setDynamicRoles(roles);
+      })
+      .catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     if (user) {
@@ -157,11 +169,21 @@ export function UserFormDialog({
                   onChange={(e) => update("role", e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 >
-                  <option value="admin">Admin</option>
-                  <option value="manager">Quản lý</option>
-                  <option value="staff">Nhân viên</option>
-                  <option value="finance">Kế toán</option>
-                  <option value="viewer">Xem</option>
+                  {dynamicRoles.length > 0 ? (
+                    dynamicRoles.map((r) => (
+                      <option key={r.id} value={r.code}>
+                        {r.name} {r.isSystem ? "(System)" : ""}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="admin">Admin</option>
+                      <option value="manager">Quản lý</option>
+                      <option value="staff">Nhân viên</option>
+                      <option value="finance">Kế toán</option>
+                      <option value="viewer">Xem</option>
+                    </>
+                  )}
                 </select>
               </div>
 
