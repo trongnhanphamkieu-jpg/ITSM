@@ -146,6 +146,80 @@ export class AuthService {
     return { success: true, data: user };
   }
 
+  async getMyPermissions(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, dynamicRoleId: true },
+    });
+
+    if (!user) throw new UnauthorizedException('User not found');
+
+    // Try dynamic role first
+    if (user.dynamicRoleId) {
+      const role = await this.prisma.dynamicRole.findUnique({
+        where: { id: user.dynamicRoleId },
+        include: { permissions: true },
+      });
+
+      if (role?.isActive) {
+        const moduleMap: Record<string, any> = {};
+        for (const p of role.permissions) {
+          moduleMap[p.module] = {
+            canView: p.canView, canCreate: p.canCreate,
+            canEdit: p.canEdit, canDelete: p.canDelete,
+            canExport: p.canExport, canImport: p.canImport,
+            canApprove: p.canApprove,
+          };
+        }
+        return {
+          success: true,
+          data: {
+            roleCode: role.code,
+            roleName: role.name,
+            isSystem: role.isSystem,
+            modules: moduleMap,
+          },
+        };
+      }
+    }
+
+    // Fallback: generate from legacy enum
+    const MODULES = [
+      'dashboard', 'budget_plan', 'actual_cost', 'vendor', 'contract',
+      'soft_inventory', 'hard_inventory', 'infrastructure', 'vehicle',
+      'cost_forecast', 'project', 'report', 'activity_log', 'master_data',
+      'user_management',
+    ];
+
+    const isAdmin = user.role === 'admin';
+    const isManager = user.role === 'manager';
+    const isFinance = user.role === 'finance';
+    const isViewer = user.role === 'viewer';
+
+    const moduleMap: Record<string, any> = {};
+    for (const m of MODULES) {
+      moduleMap[m] = {
+        canView: true,
+        canCreate: isAdmin || isManager || (!isViewer),
+        canEdit: isAdmin || isManager || (!isViewer),
+        canDelete: isAdmin || isManager,
+        canExport: true,
+        canImport: isAdmin || isManager,
+        canApprove: isAdmin || isManager || isFinance,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        roleCode: user.role,
+        roleName: user.role,
+        isSystem: false,
+        modules: moduleMap,
+      },
+    };
+  }
+
   private async generateAccessToken(payload: JwtPayload) {
     return this.jwt.signAsync(payload, {
       expiresIn: this.config.get('JWT_ACCESS_TTL', '8h'),

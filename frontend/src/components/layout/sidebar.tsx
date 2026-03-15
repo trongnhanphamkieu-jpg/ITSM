@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { LanguageSwitch, useI18n } from "@/lib/i18n";
+import { usePermissions } from "@/lib/permission-store";
 
 interface NavItem {
   labelKey: string;
   href: string;
   icon: string;
+  module?: string; // permission module code — if set, checks canView
 }
 
 interface NavGroup {
@@ -22,42 +24,42 @@ const NAV_ITEMS: NavGroup[] = [
   {
     groupKey: "nav.group.overview",
     items: [
-      { labelKey: "nav.dashboard", href: "/", icon: "bi-speedometer2" },
+      { labelKey: "nav.dashboard", href: "/", icon: "bi-speedometer2", module: "dashboard" },
     ],
   },
   {
     groupKey: "nav.group.budget",
     items: [
-      { labelKey: "nav.budget_plans", href: "/budget/plans", icon: "bi-wallet2" },
-      { labelKey: "nav.costs", href: "/costs", icon: "bi-cash-stack" },
-      { labelKey: "nav.forecasts", href: "/forecasts", icon: "bi-graph-up-arrow" },
-      { labelKey: "nav.projects", href: "/projects", icon: "bi-folder" },
+      { labelKey: "nav.budget_plans", href: "/budget/plans", icon: "bi-wallet2", module: "budget_plan" },
+      { labelKey: "nav.costs", href: "/costs", icon: "bi-cash-stack", module: "actual_cost" },
+      { labelKey: "nav.forecasts", href: "/forecasts", icon: "bi-graph-up-arrow", module: "cost_forecast" },
+      { labelKey: "nav.projects", href: "/projects", icon: "bi-folder", module: "project" },
     ],
   },
   {
     groupKey: "nav.group.assets",
     items: [
-      { labelKey: "nav.vendors", href: "/vendors", icon: "bi-building" },
-      { labelKey: "nav.soft_inventory", href: "/inventory/soft", icon: "bi-laptop" },
-      { labelKey: "nav.hard_inventory", href: "/inventory/hard", icon: "bi-pc-display" },
-      { labelKey: "nav.infrastructure", href: "/infrastructure", icon: "bi-diagram-3" },
+      { labelKey: "nav.vendors", href: "/vendors", icon: "bi-building", module: "vendor" },
+      { labelKey: "nav.soft_inventory", href: "/inventory/soft", icon: "bi-laptop", module: "soft_inventory" },
+      { labelKey: "nav.hard_inventory", href: "/inventory/hard", icon: "bi-pc-display", module: "hard_inventory" },
+      { labelKey: "nav.infrastructure", href: "/infrastructure", icon: "bi-diagram-3", module: "infrastructure" },
     ],
   },
   {
     groupKey: "nav.group.operations",
     items: [
-      { labelKey: "nav.vehicles", href: "/vehicles", icon: "bi-truck" },
-      { labelKey: "nav.reports", href: "/reports", icon: "bi-bar-chart-line" },
-      { labelKey: "nav.activity_log", href: "/activity-log", icon: "bi-journal-text" },
+      { labelKey: "nav.vehicles", href: "/vehicles", icon: "bi-truck", module: "vehicle" },
+      { labelKey: "nav.reports", href: "/reports", icon: "bi-bar-chart-line", module: "report" },
+      { labelKey: "nav.activity_log", href: "/activity-log", icon: "bi-journal-text", module: "activity_log" },
     ],
   },
   {
     groupKey: "nav.group.system",
     items: [
-      { labelKey: "nav.master_data", href: "/settings/master-data", icon: "bi-database-gear" },
+      { labelKey: "nav.master_data", href: "/settings/master-data", icon: "bi-database-gear", module: "master_data" },
       { labelKey: "nav.config", href: "/settings/config", icon: "bi-gear" },
       { labelKey: "nav.security", href: "/settings/security", icon: "bi-shield-lock" },
-      { labelKey: "nav.users", href: "/settings/users", icon: "bi-people" },
+      { labelKey: "nav.users", href: "/settings/users", icon: "bi-people", module: "user_management" },
     ],
   },
 ];
@@ -70,6 +72,15 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { t } = useI18n();
+  const { canView, isLoaded } = usePermissions();
+
+  // Filter nav items by permission
+  const visibleGroups = NAV_ITEMS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      !item.module || !isLoaded || canView(item.module)
+    ),
+  })).filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -102,7 +113,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {NAV_ITEMS.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.groupKey} className="mb-6">
               <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
                 {t(group.groupKey)}

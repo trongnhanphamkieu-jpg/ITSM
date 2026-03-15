@@ -3,14 +3,23 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
+import { usePermissionStore } from "@/lib/permission-store";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, refreshAuth } = useAuthStore();
+  const { fetchPermissions, isLoaded: permLoaded } = usePermissionStore();
   const router = useRouter();
 
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth]);
+
+  // Fetch permissions after auth is confirmed
+  useEffect(() => {
+    if (isAuthenticated && !permLoaded) {
+      fetchPermissions();
+    }
+  }, [isAuthenticated, permLoaded, fetchPermissions]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

@@ -5,9 +5,42 @@
 ---
 
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
+<!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
-## 2026-03-16 01:05 — Agent: Session 43 (V2-F8: Dynamic RBAC ✅)
+## 2026-03-16 01:30 — Agent: Session 44 (V2 Comprehensive Audit + Dashboard Widgets ✅)
+
+### Hoàn thành
+- **Đánh giá toàn bộ Wave 2**: Kiểm tra chi tiết 97 tasks trong TASKS-itsm-v2.md vs code thực tế
+- **Backend F1-F8**: Tất cả API đã triển khai đầy đủ
+  - F1: `PATCH /actual-costs/:id/payment` + `UpdatePaymentDto` + `partial_paid`
+  - F2: `CostAttachment` schema + API sẵn sàng
+  - F3: 5 API endpoints vendor payables + reconciliation
+  - F4-F5: Reports API đã có từ Session 42
+  - F6-F7: Master Data module hoàn chỉnh
+  - F8: RBAC module từ Session 43
+- **Dashboard**: +2 widgets mới
+  - Widget "Tổng quan thanh toán" (4 trạng thái: pending/partial/paid/cancelled)
+  - Widget "Giao dịch quá hạn" (top 5 items, severity badges)
+- **Frontend costs/page.tsx**: Đã có payment modal + badges + filter
+
+### Kiểm chứng
+- ✅ Backend build: 0 errors
+- ✅ Frontend build: 0 errors
+- ✅ Jest: 232/232 tests pass
+- ✅ GitHub push: `8934c33`
+
+### Đánh giá Wave 2 còn thiếu
+| Hạng mục | Trạng thái |
+|----------|-----------|
+| Backend API F1-F8 | ✅ 100% |
+| Dashboard widgets | ✅ Done |
+| Frontend vendor payables tab | ⬜ Chưa có UI |
+| Form migration (16 dropdowns) | ⬜ Phần lớn chưa migrations |
+| PermissionGuard + @RequirePermission | ⬜ Phase 4 frontend |
+| RBAC frontend (role matrix UI) | ⬜ Phase 4 frontend |
+
+---
 
 ### Hoàn thành
 - **RBAC Module**: `rbac.service.ts` CRUD DynamicRole + seed 5 roles × 15 module permissions

@@ -39,5 +39,12 @@ export class AuthController {
   getProfile(@Request() req: { user: { id: string } }) {
     return this.authService.getProfile(req.user.id);
   }
-}
 
+  @Get('me/permissions')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lấy quyền hiện tại của user' })
+  getMyPermissions(@Request() req: { user: { id: string } }) {
+    return this.authService.getMyPermissions(req.user.id);
+  }
+}
