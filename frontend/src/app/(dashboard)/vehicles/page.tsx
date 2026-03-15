@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { VendorSelect } from "@/components/shared/vendor-select";
 import { UserSelect } from "@/components/shared/user-select";
+import { MasterDataSelect } from "@/components/shared";
 import { formatCurrency } from "@/lib/utils";
 import { ExportButton } from "@/components/shared/export-button";
 import type { ExportColumn } from "@/components/shared/export-button";
@@ -237,11 +238,11 @@ export default function VehiclePage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Loại xe</label>
-          <select value={formData.type || ""} onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-            <option value="">Chọn...</option>
-            {[{ v: "sedan", l: "Sedan" }, { v: "suv", l: "SUV" }, { v: "truck", l: "Xe tải" }, { v: "van", l: "Xe van" }, { v: "motorcycle", l: "Xe máy" }].map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-          </select>
+          <MasterDataSelect
+            type="vehicle_type"
+            value={formData.type || ""}
+            onChange={(v) => setFormData({ ...formData, type: v })}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Người phụ trách</label>

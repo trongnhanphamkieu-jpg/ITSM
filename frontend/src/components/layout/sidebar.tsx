@@ -54,6 +54,7 @@ const NAV_ITEMS: NavGroup[] = [
   {
     groupKey: "nav.group.system",
     items: [
+      { labelKey: "nav.master_data", href: "/settings/master-data", icon: "bi-database-gear" },
       { labelKey: "nav.config", href: "/settings/config", icon: "bi-gear" },
       { labelKey: "nav.security", href: "/settings/security", icon: "bi-shield-lock" },
       { labelKey: "nav.users", href: "/settings/users", icon: "bi-people" },

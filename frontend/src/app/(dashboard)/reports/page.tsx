@@ -8,7 +8,7 @@ function fmt(n: number) {
   return new Intl.NumberFormat("vi-VN").format(n) + "₫";
 }
 
-type ReportTab = "budget" | "cost" | "asset" | "project" | "vehicle" | "contract";
+type ReportTab = "budget" | "cost" | "asset" | "project" | "vendor" | "overdue" | "vehicle" | "contract";
 
 export default function ReportsPage() {
   const [tab, setTab] = useState<ReportTab>("budget");
@@ -36,6 +36,12 @@ export default function ReportsPage() {
         case "vehicle":
           try { result = await api.get("/vehicles", { limit: 100 }); } catch { result = { data: [] }; }
           break;
+        case "vendor":
+          result = await api.get("/reports/vendor-costs", { year });
+          break;
+        case "overdue":
+          result = await api.get("/reports/overdue");
+          break;
         case "contract":
           try { result = await api.get("/contracts", { limit: 100 }); } catch { result = { data: [] }; }
           break;
@@ -53,7 +59,9 @@ export default function ReportsPage() {
   const tabs: { key: ReportTab; label: string; icon: string }[] = [
     { key: "budget", label: "Ngân sách", icon: "💰" },
     { key: "cost", label: "Chi phí so sánh", icon: "📊" },
-    { key: "asset", label: "Tổng quan tài sản", icon: "🏢" },
+    { key: "vendor", label: "Chi phí theo NCC", icon: "🏢" },
+    { key: "overdue", label: "Quá hạn TT", icon: "⚠️" },
+    { key: "asset", label: "Tổng quan tài sản", icon: "🖥️" },
     { key: "project", label: "Ngân sách dự án", icon: "📁" },
     { key: "vehicle", label: "Phương tiện", icon: "🚗" },
     { key: "contract", label: "Hợp đồng", icon: "📝" },
@@ -66,7 +74,7 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold text-foreground">📈 Báo cáo tổng hợp</h1>
           <p className="text-sm text-muted-foreground mt-1">Phân tích ngân sách, chi phí, tài sản và dự án</p>
         </div>
-        {tab !== "asset" && tab !== "vehicle" && tab !== "contract" && (
+        {tab !== "asset" && tab !== "vehicle" && tab !== "contract" && tab !== "overdue" && (
           <select value={year} onChange={(e) => setYear(Number(e.target.value))}
             className="px-3 py-2 bg-card border border-border rounded-lg text-sm">
             {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>Năm {y}</option>)}
@@ -263,6 +271,130 @@ export default function ReportsPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* === VENDOR COST REPORT (F4) === */}
+          {tab === "vendor" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Tổng chi phí</p>
+                  <p className="text-xl font-bold text-amber-400 mt-1">{fmt(data?.summary?.totalAll || 0)}</p>
+                </div>
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Đã thanh toán</p>
+                  <p className="text-xl font-bold text-emerald-400 mt-1">{fmt(data?.summary?.totalPaid || 0)}</p>
+                </div>
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Chưa thanh toán</p>
+                  <p className="text-xl font-bold text-red-400 mt-1">{fmt(data?.summary?.totalUnpaid || 0)}</p>
+                </div>
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Số NCC</p>
+                  <p className="text-xl font-bold text-primary mt-1">{data?.summary?.vendorCount || 0}</p>
+                </div>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">NHÀ CUNG CẤP</th>
+                      <th className="px-4 py-3 text-right font-semibold text-muted-foreground">TỔNG CHI PHÍ</th>
+                      <th className="px-4 py-3 text-right font-semibold text-muted-foreground">ĐÃ TT</th>
+                      <th className="px-4 py-3 text-right font-semibold text-muted-foreground">CHƯA TT</th>
+                      <th className="px-4 py-3 text-center font-semibold text-muted-foreground">% TT</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {data?.vendors?.map((v: any) => {
+                      const pct = v.totalCost > 0 ? Math.round((v.paidAmount / v.totalCost) * 100) : 0;
+                      return (
+                        <tr key={v.vendorId} className="hover:bg-muted/30 transition">
+                          <td className="px-4 py-3 text-foreground font-medium">
+                            <Link href={`/vendors/${v.vendorId}`} className="hover:text-primary">{v.vendorName}</Link>
+                          </td>
+                          <td className="px-4 py-3 text-right text-amber-400 font-medium">{fmt(v.totalCost)}</td>
+                          <td className="px-4 py-3 text-right text-emerald-400">{fmt(v.paidAmount)}</td>
+                          <td className="px-4 py-3 text-right text-red-400">{fmt(v.unpaidAmount)}</td>
+                          <td className="px-4 py-3 text-center">
+                            <div className="flex items-center gap-2 justify-center">
+                              <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-muted-foreground">{pct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {(!data?.vendors || data.vendors.length === 0) && (
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Không có dữ liệu chi phí NCC</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* === OVERDUE REPORT (F5) === */}
+          {tab === "overdue" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="bg-card rounded-xl border border-red-500/30 p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Số khoản quá hạn</p>
+                  <p className="text-2xl font-bold text-red-400 mt-1">{data?.totalOverdue || 0}</p>
+                </div>
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Tổng giá trị</p>
+                  <p className="text-xl font-bold text-amber-400 mt-1">{fmt(data?.totalAmount || 0)}</p>
+                </div>
+                <div className="bg-card rounded-xl border border-border p-4">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">Còn nợ</p>
+                  <p className="text-xl font-bold text-red-400 mt-1">{fmt(data?.totalUnpaid || 0)}</p>
+                </div>
+              </div>
+
+              <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">MÔ TẢ</th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">NCC</th>
+                      <th className="px-4 py-3 text-right font-semibold text-muted-foreground">SỐ TIỀN</th>
+                      <th className="px-4 py-3 text-right font-semibold text-muted-foreground">CÒN NỢ</th>
+                      <th className="px-4 py-3 text-center font-semibold text-muted-foreground">HẠN TT</th>
+                      <th className="px-4 py-3 text-center font-semibold text-muted-foreground">QUÁ HẠN</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {data?.items?.map((item: any) => (
+                      <tr key={item.id} className="hover:bg-muted/30 transition">
+                        <td className="px-4 py-3 text-foreground font-medium max-w-[200px] truncate">{item.description}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{item.vendor || "—"}</td>
+                        <td className="px-4 py-3 text-right text-amber-400">{fmt(item.amount)}</td>
+                        <td className="px-4 py-3 text-right text-red-400 font-medium">{fmt(item.unpaidAmount)}</td>
+                        <td className="px-4 py-3 text-center text-sm text-muted-foreground">
+                          {item.paymentDueDate ? new Date(item.paymentDueDate).toLocaleDateString("vi-VN") : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                            item.daysOverdue > 30 ? "bg-red-500/20 text-red-400" :
+                            item.daysOverdue > 7 ? "bg-orange-500/20 text-orange-400" :
+                            "bg-yellow-500/20 text-yellow-400"
+                          }`}>
+                            {item.daysOverdue} ngày
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {(!data?.items || data.items.length === 0) && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-emerald-400">✅ Không có khoản quá hạn!</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

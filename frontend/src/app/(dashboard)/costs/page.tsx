@@ -11,6 +11,13 @@ import { CurrencyInput } from "@/components/shared/currency-input";
 import { ExportButton } from "@/components/shared/export-button";
 import type { ExportColumn } from "@/components/shared/export-button";
 
+const PAYMENT_LABELS: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: "Chưa TT", color: "text-orange-700", bg: "bg-orange-100" },
+  partial_paid: { label: "TT 1 phần", color: "text-blue-700", bg: "bg-blue-100" },
+  paid: { label: "Đã TT", color: "text-emerald-700", bg: "bg-emerald-100" },
+  cancelled: { label: "Đã hủy", color: "text-gray-500", bg: "bg-gray-100" },
+};
+
 const COST_EXPORT_COLUMNS: ExportColumn[] = [
   { header: "Ngày", key: "costDate", format: (v: string) => v ? new Date(v).toLocaleDateString("vi-VN") : "" },
   { header: "Danh mục", key: "categoryName" },
@@ -29,13 +36,17 @@ interface ActualCost {
   categoryName: string;
   description: string;
   amount: string;
+  paidAmount: string | null;
   costDate: string;
+  paymentStatus: string;
+  paymentDueDate: string | null;
   vendor: string | null;
   vendorId: string | null;
   vendorRef: { id: string; name: string; code: string } | null;
   invoiceNo: string | null;
   createdBy: { id: string; fullName: string };
   budgetItem: { id: string; name: string; category: { name: string } } | null;
+  attachments: { id: string; fileName: string }[];
 }
 
 interface ApiResponse {
@@ -52,12 +63,18 @@ export default function CostListPage() {
   const [meta, setMeta] = useState({ total: 0, page: 1, totalPages: 1 });
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ categoryName: "", description: "", amount: 0, costDate: "", vendorId: "", invoiceNo: "", note: "" });
   const [editSaving, setEditSaving] = useState(false);
+  // Payment modal
+  const [payingCost, setPayingCost] = useState<ActualCost | null>(null);
+  const [payAmount, setPayAmount] = useState(0);
+  const [payNote, setPayNote] = useState("");
+  const [paySaving, setPaySaving] = useState(false);
 
   const fetchCosts = useCallback(async () => {
     setIsLoading(true);
@@ -68,6 +85,7 @@ export default function CostListPage() {
       };
       if (search) params.search = search;
       if (categoryFilter) params.categoryName = categoryFilter;
+      if (paymentFilter) params.paymentStatus = paymentFilter;
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
 
@@ -83,7 +101,7 @@ export default function CostListPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [meta.page, search, categoryFilter, dateFrom, dateTo]);
+  }, [meta.page, search, categoryFilter, paymentFilter, dateFrom, dateTo]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -172,6 +190,20 @@ export default function CostListPage() {
               </option>
             ))}
           </select>
+          <select
+            value={paymentFilter}
+            onChange={(e) => {
+              setPaymentFilter(e.target.value);
+              setMeta((p) => ({ ...p, page: 1 }));
+            }}
+            className="rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          >
+            <option value="">Tất cả trạng thái TT</option>
+            <option value="pending">Chưa thanh toán</option>
+            <option value="partial_paid">TT một phần</option>
+            <option value="paid">Đã thanh toán</option>
+            <option value="cancelled">Đã hủy</option>
+          </select>
           <input
             type="date"
             value={dateFrom}
@@ -248,6 +280,9 @@ export default function CostListPage() {
                     SỐ HĐ
                   </th>
                   <th className="px-4 py-3 text-center font-medium text-muted-foreground">
+                    THANH TOÁN
+                  </th>
+                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">
                     THAO TÁC
                   </th>
                 </tr>
@@ -269,12 +304,9 @@ export default function CostListPage() {
                     </td>
                     <td className="px-4 py-3">
                       {editingId === cost.id ? (
-                        <input
-                          type="text"
+                        <CategorySelect
                           value={editForm.categoryName}
-                          onChange={(e) => setEditForm(f => ({ ...f, categoryName: e.target.value }))}
-                          className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
-                          placeholder="Danh mục"
+                          onChange={(v) => setEditForm(f => ({ ...f, categoryName: v }))}
                         />
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-card-foreground">
@@ -333,6 +365,31 @@ export default function CostListPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
+                      {(() => {
+                        const ps = PAYMENT_LABELS[cost.paymentStatus] || PAYMENT_LABELS.pending;
+                        const paid = Number(cost.paidAmount || 0);
+                        const total = Number(cost.amount);
+                        const pct = total > 0 ? Math.min(Math.round((paid / total) * 100), 100) : 0;
+                        return (
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${ps.color} ${ps.bg}`}>
+                              {ps.label}
+                            </span>
+                            {cost.paymentStatus !== 'cancelled' && (
+                              <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    pct >= 100 ? 'bg-emerald-500' : pct > 0 ? 'bg-blue-500' : 'bg-orange-400'
+                                  }`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3 text-center">
                       {editingId === cost.id ? (
                         <div className="flex items-center gap-1 justify-center">
                           <button onClick={async () => {
@@ -378,6 +435,15 @@ export default function CostListPage() {
                           }} className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50" title="Xóa">
                             <i className="bi bi-trash" />
                           </button>
+                          {cost.paymentStatus !== 'paid' && cost.paymentStatus !== 'cancelled' && (
+                            <button onClick={() => {
+                              setPayingCost(cost);
+                              setPayAmount(Number(cost.paidAmount || 0));
+                              setPayNote("");
+                            }} className="rounded p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50" title="Thanh toán">
+                              <i className="bi bi-credit-card" />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -446,6 +512,93 @@ export default function CostListPage() {
             </div>
           </div>
         </>
+      )}
+      {/* Payment Modal */}
+      {payingCost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div onClick={() => setPayingCost(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md mx-4 rounded-xl bg-card border border-border shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-card-foreground">Thanh toán chi phí</h3>
+              <button onClick={() => setPayingCost(null)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
+                <i className="bi bi-x-lg" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">Chi phí</p>
+                <p className="text-sm font-medium text-card-foreground">{payingCost.description}</p>
+                <p className="text-lg font-bold text-primary mt-1">{formatCurrency(payingCost.amount)}</p>
+                {Number(payingCost.paidAmount || 0) > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Đã TT: {formatCurrency(payingCost.paidAmount || "0")}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-card-foreground">
+                  Số tiền thanh toán <span className="text-danger">*</span>
+                </label>
+                <CurrencyInput
+                  value={payAmount}
+                  onChange={(raw) => setPayAmount(raw)}
+                  required
+                />
+                {payAmount > 0 && payAmount < Number(payingCost.amount) && (
+                  <p className="mt-1 text-xs text-blue-600">
+                    → Thanh toán một phần ({Math.round((payAmount / Number(payingCost.amount)) * 100)}%)
+                  </p>
+                )}
+                {payAmount >= Number(payingCost.amount) && (
+                  <p className="mt-1 text-xs text-emerald-600">→ Đã thanh toán đủ</p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-card-foreground">Ghi chú</label>
+                <input
+                  type="text"
+                  value={payNote}
+                  onChange={(e) => setPayNote(e.target.value)}
+                  placeholder="VD: Đợt 1, chuyển khoản..."
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setPayingCost(null)}
+                className="flex-1 rounded-lg border border-input py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={async () => {
+                  setPaySaving(true);
+                  try {
+                    await api.patch(`/actual-costs/${payingCost.id}/payment`, {
+                      paidAmount: payAmount,
+                      note: payNote || undefined,
+                    });
+                    setPayingCost(null);
+                    fetchCosts();
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : "Lỗi thanh toán");
+                  } finally {
+                    setPaySaving(false);
+                  }
+                }}
+                disabled={paySaving || payAmount <= 0}
+                className="flex-1 rounded-lg bg-emerald-600 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              >
+                {paySaving ? "Đang xử lý..." : "Xác nhận thanh toán"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

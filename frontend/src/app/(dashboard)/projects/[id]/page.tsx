@@ -6,6 +6,8 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { CategorySelect } from "@/components/shared/category-select";
+import { MasterDataSelect } from "@/components/shared";
 
 interface Project {
   id: string;
@@ -449,14 +451,20 @@ export default function ProjectDetailPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-card-foreground mb-1.5">Danh mục</label>
-                <input type="text" value={budgetForm.categoryName} onChange={(e) => setBudgetForm({ ...budgetForm, categoryName: e.target.value })}
-                  placeholder="VD: Phần cứng" className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
+                <CategorySelect
+                  value={budgetForm.categoryName}
+                  onChange={(v) => setBudgetForm({ ...budgetForm, categoryName: v })}
+                />
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-card-foreground mb-1.5">ĐVT</label>
-                  <input type="text" value={budgetForm.unit} onChange={(e) => setBudgetForm({ ...budgetForm, unit: e.target.value })}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" />
+                  <MasterDataSelect
+                    type="unit_of_measure"
+                    value={budgetForm.unit}
+                    onChange={(v) => setBudgetForm({ ...budgetForm, unit: v })}
+                    placeholder="Chọn đơn vị"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-card-foreground mb-1.5">Số lượng</label>
@@ -521,8 +529,10 @@ export default function ProjectDetailPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-card-foreground mb-1.5">Danh mục</label>
-                <input type="text" value={costForm.categoryName} onChange={(e) => setCostForm({ ...costForm, categoryName: e.target.value })}
-                  placeholder="VD: Phần cứng" className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm outline-none focus:border-primary" />
+                <CategorySelect
+                  value={costForm.categoryName}
+                  onChange={(v) => setCostForm({ ...costForm, categoryName: v })}
+                />
               </div>
               {budgetItems.length > 0 && (
                 <div>

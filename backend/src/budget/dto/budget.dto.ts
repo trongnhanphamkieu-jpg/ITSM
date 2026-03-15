@@ -55,6 +55,11 @@ export class BudgetCategoryDto {
   @IsNotEmpty()
   name: string;
 
+  @ApiPropertyOptional({ description: 'FK to MasterCategory (budget_category type)' })
+  @IsOptional()
+  @IsString()
+  masterCategoryId?: string;
+
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsInt()

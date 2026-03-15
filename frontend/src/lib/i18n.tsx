@@ -32,6 +32,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "nav.reports": "Báo cáo",
     "nav.activity_log": "Nhật ký",
     "nav.config": "Cấu hình",
+    "nav.master_data": "Danh mục chung",
     "nav.security": "Bảo mật",
     "nav.users": "Người dùng",
 
@@ -217,6 +218,23 @@ const translations: Record<Locale, Record<string, string>> = {
     "users.title": "Quản lý người dùng",
     "users.desc": "Quản lý tài khoản và phân quyền",
 
+    // Master Data
+    "master_data.title": "Danh mục dùng chung",
+    "master_data.desc": "Cấu hình dữ liệu master data và danh mục dùng chung cho toàn hệ thống",
+    "master_data.tab_items": "Dữ liệu chung",
+    "master_data.tab_categories": "Danh mục",
+    "master_data.add_item": "Thêm mục",
+    "master_data.add_category": "Thêm danh mục",
+    "master_data.type": "Loại",
+    "master_data.code": "Mã",
+    "master_data.name": "Tên",
+    "master_data.status": "Trạng thái",
+    "master_data.all_types": "Tất cả loại",
+    "master_data.seed": "Tạo dữ liệu mẫu",
+    "master_data.seed_confirm": "Tạo dữ liệu mặc định cho hệ thống?",
+    "master_data.parent": "Danh mục cha",
+    "master_data.no_parent": "-- Gốc --",
+
     // Topbar
     "topbar.search": "Tìm kiếm...",
   },
@@ -241,6 +259,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "nav.reports": "Reports",
     "nav.activity_log": "Activity Log",
     "nav.config": "Configuration",
+    "nav.master_data": "Master Data",
     "nav.security": "Security",
     "nav.users": "Users",
 
@@ -425,6 +444,23 @@ const translations: Record<Locale, Record<string, string>> = {
     // Users page
     "users.title": "User Management",
     "users.desc": "Manage accounts and permissions",
+
+    // Master Data
+    "master_data.title": "Master Data",
+    "master_data.desc": "Configure master data items and shared categories for the entire system",
+    "master_data.tab_items": "Data Items",
+    "master_data.tab_categories": "Categories",
+    "master_data.add_item": "Add Item",
+    "master_data.add_category": "Add Category",
+    "master_data.type": "Type",
+    "master_data.code": "Code",
+    "master_data.name": "Name",
+    "master_data.status": "Status",
+    "master_data.all_types": "All Types",
+    "master_data.seed": "Seed Default Data",
+    "master_data.seed_confirm": "Generate default data for the system?",
+    "master_data.parent": "Parent Category",
+    "master_data.no_parent": "-- Root --",
 
     // Topbar
     "topbar.search": "Search...",

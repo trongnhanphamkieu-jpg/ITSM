@@ -6,6 +6,85 @@ datasource db {
   provider = "postgresql"
 }
 
+// ── Module: Master Data Configuration (V2.0) ──
+
+model MasterDataItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  type        String   @db.VarChar(50)
+  code        String   @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  metadata    Json?    @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([type, code])
+  @@index([type, isActive])
+  @@map("master_data_items")
+}
+
+model MasterCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  type        String   @db.VarChar(50)
+  parentId    String?  @map("parent_id") @db.Uuid
+  description String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent          MasterCategory?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children        MasterCategory[] @relation("CategoryTree")
+  budgetCategories BudgetCategory[] @relation("MasterCategoryBudget")
+  actualCosts     ActualCost[]     @relation("MasterCategoryCosts")
+  hardwareAssets  HardwareAsset[]  @relation("MasterCategoryHardware")
+
+  @@index([type, isActive])
+  @@index([parentId])
+  @@map("master_categories")
+}
+
+// ── Module: Dynamic RBAC (V2.0) ──
+
+model DynamicRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  permissions RolePermission[]
+  users       User[]           @relation("UserDynamicRole")
+
+  @@map("dynamic_roles")
+}
+
+model RolePermission {
+  id         String  @id @default(uuid()) @db.Uuid
+  roleId     String  @map("role_id") @db.Uuid
+  module     String  @db.VarChar(50)
+  canView    Boolean @default(false) @map("can_view")
+  canCreate  Boolean @default(false) @map("can_create")
+  canEdit    Boolean @default(false) @map("can_edit")
+  canDelete  Boolean @default(false) @map("can_delete")
+  canExport  Boolean @default(false) @map("can_export")
+  canImport  Boolean @default(false) @map("can_import")
+  canApprove Boolean @default(false) @map("can_approve")
+
+  role DynamicRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module])
+  @@index([roleId])
+  @@map("role_permissions")
+}
+
 // ── Module: Authentication & Users ──
 
 enum UserRole {
@@ -28,6 +107,7 @@ model User {
   email          String     @unique @db.VarChar(255)
   passwordHash   String     @map("password_hash") @db.VarChar(255)
   role           UserRole   @default(staff)
+  dynamicRoleId  String?    @map("dynamic_role_id") @db.Uuid  // V2.0: FK to DynamicRole
   status         UserStatus @default(active)
   twoFaSecret    String?    @map("two_fa_secret") @db.VarChar(255)
   twoFaEnabled   Boolean    @default(false) @map("two_fa_enabled")
@@ -40,6 +120,7 @@ model User {
   createdAt      DateTime   @default(now()) @map("created_at")
   updatedAt      DateTime   @updatedAt @map("updated_at")
 
+  dynamicRole    DynamicRole? @relation("UserDynamicRole", fields: [dynamicRoleId], references: [id])
   auditLogs      AuditLog[]
   createdPlans   BudgetPlan[] @relation("CreatedPlans")
   approvedPlans  BudgetPlan[] @relation("ApprovedPlans")
@@ -72,7 +153,9 @@ model User {
   licenseAssignedBy LicenseAssignment[] @relation("LicenseAssigner")
   assetAssignedBy AssetAssignment[] @relation("AssetAssigner")
   maintenanceCreated AssetMaintenanceLog[] @relation("MaintenanceCreator")
+  reconciliationsConfirmed VendorReconciliation[] @relation("ReconciliationConfirmer")
 
+  @@index([dynamicRoleId])
   @@map("users")
 }
 
@@ -137,15 +220,18 @@ model BudgetPlan {
 }
 
 model BudgetCategory {
-  id       String @id @default(uuid()) @db.Uuid
-  planId   String @map("plan_id") @db.Uuid
-  name     String @db.VarChar(255)
-  sortOrder Int   @default(0) @map("sort_order")
+  id               String @id @default(uuid()) @db.Uuid
+  planId           String @map("plan_id") @db.Uuid
+  name             String @db.VarChar(255)
+  masterCategoryId String? @map("master_category_id") @db.Uuid  // V2.0: FK to MasterCategory
+  sortOrder        Int   @default(0) @map("sort_order")
 
-  plan  BudgetPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
-  items BudgetItem[]
+  plan           BudgetPlan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  masterCategory MasterCategory? @relation("MasterCategoryBudget", fields: [masterCategoryId], references: [id])
+  items          BudgetItem[]
 
   @@index([planId])
+  @@index([masterCategoryId])
   @@map("budget_categories")
 }
 
@@ -175,46 +261,53 @@ model BudgetItem {
 
 enum PaymentStatus {
   pending
+  partial_paid  // V2.0: Thanh toán một phần
   paid
   cancelled
 }
 
 model ActualCost {
-  id             String         @id @default(uuid()) @db.Uuid
-  budgetItemId   String?        @map("budget_item_id") @db.Uuid
-  categoryName   String         @map("category_name") @db.VarChar(255)
-  description    String         @db.Text
-  amount         Decimal        @db.Decimal(18, 2)
-  costDate       DateTime       @map("cost_date") @db.Date
-  vendor         String?        @db.VarChar(255)
-  vendorId       String?        @map("vendor_id") @db.Uuid
-  contractId     String?        @map("contract_id") @db.Uuid
-  invoiceNo      String?        @map("invoice_no") @db.VarChar(100)
-  poNumber       String?        @map("po_number") @db.VarChar(100)
-  paymentStatus  PaymentStatus  @default(pending) @map("payment_status")
-  paidAt         DateTime?      @map("paid_at") @db.Date
-  note           String?        @db.Text
-  createdById    String         @map("created_by") @db.Uuid
-  projectId      String?        @map("project_id") @db.Uuid
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
-  deletedAt      DateTime?      @map("deleted_at")
+  id               String         @id @default(uuid()) @db.Uuid
+  budgetItemId     String?        @map("budget_item_id") @db.Uuid
+  categoryName     String         @map("category_name") @db.VarChar(255)
+  masterCategoryId String?        @map("master_category_id") @db.Uuid  // V2.0
+  description      String         @db.Text
+  amount           Decimal        @db.Decimal(18, 2)
+  paidAmount       Decimal?       @map("paid_amount") @db.Decimal(18, 2)  // V2.0: Đã thanh toán
+  costDate         DateTime       @map("cost_date") @db.Date
+  paymentDueDate   DateTime?      @map("payment_due_date") @db.Date  // V2.0: Hạn thanh toán
+  vendor           String?        @db.VarChar(255)
+  vendorId         String?        @map("vendor_id") @db.Uuid
+  contractId       String?        @map("contract_id") @db.Uuid
+  invoiceNo        String?        @map("invoice_no") @db.VarChar(100)
+  poNumber         String?        @map("po_number") @db.VarChar(100)
+  paymentStatus    PaymentStatus  @default(pending) @map("payment_status")
+  paidAt           DateTime?      @map("paid_at") @db.Date
+  note             String?        @db.Text
+  createdById      String         @map("created_by") @db.Uuid
+  projectId        String?        @map("project_id") @db.Uuid
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  deletedAt        DateTime?      @map("deleted_at")
 
-  budgetItem   BudgetItem? @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
-  createdBy    User        @relation("CreatedCosts", fields: [createdById], references: [id])
-  project      Project?    @relation(fields: [projectId], references: [id])
-  vendorRef    Vendor?     @relation("VendorCosts", fields: [vendorId], references: [id])
-  contractRef  Contract?   @relation("ContractCosts", fields: [contractId], references: [id])
-  attachments  CostAttachment[]
+  budgetItem      BudgetItem?     @relation(fields: [budgetItemId], references: [id], onDelete: SetNull)
+  masterCategory  MasterCategory? @relation("MasterCategoryCosts", fields: [masterCategoryId], references: [id])
+  createdBy       User            @relation("CreatedCosts", fields: [createdById], references: [id])
+  project         Project?        @relation(fields: [projectId], references: [id])
+  vendorRef       Vendor?         @relation("VendorCosts", fields: [vendorId], references: [id])
+  contractRef     Contract?       @relation("ContractCosts", fields: [contractId], references: [id])
+  attachments     CostAttachment[]
 
   @@index([costDate])
   @@index([budgetItemId])
   @@index([createdById])
   @@index([categoryName])
+  @@index([masterCategoryId])
   @@index([projectId])
   @@index([vendorId])
   @@index([contractId])
   @@index([paymentStatus])
+  @@index([paymentDueDate])
   @@map("actual_costs")
 }
 
@@ -290,11 +383,46 @@ model Vendor {
   vehicles         Vehicle[]          @relation("VendorVehicles")
   actualCosts      ActualCost[]       @relation("VendorCosts")
   forecastItems    CostForecastItem[] @relation("VendorForecasts")
+  reconciliations  VendorReconciliation[] @relation("VendorReconciliations")
 
   @@index([status])
   @@index([createdById])
   @@index([name])
   @@map("vendors")
+}
+
+// ── Module: Vendor Accounts Payable (V2.0) ──
+
+model VendorReconciliation {
+  id                 String   @id @default(uuid()) @db.Uuid
+  vendorId           String   @map("vendor_id") @db.Uuid
+  reconciliationDate DateTime @map("reconciliation_date") @db.Date
+  totalOutstanding   Decimal  @map("total_outstanding") @db.Decimal(18, 2)
+  totalPaid          Decimal  @map("total_paid") @db.Decimal(18, 2)
+  confirmedBy        String   @map("confirmed_by") @db.Uuid
+  notes              String?  @db.Text
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  vendor    Vendor @relation("VendorReconciliations", fields: [vendorId], references: [id])
+  confirmer User   @relation("ReconciliationConfirmer", fields: [confirmedBy], references: [id])
+  items     VendorReconciliationItem[]
+
+  @@index([vendorId, reconciliationDate])
+  @@map("vendor_reconciliations")
+}
+
+model VendorReconciliationItem {
+  id               String  @id @default(uuid()) @db.Uuid
+  reconciliationId String  @map("reconciliation_id") @db.Uuid
+  actualCostId     String  @map("actual_cost_id") @db.Uuid
+  amount           Decimal @db.Decimal(18, 2)
+  status           String  @db.VarChar(20)
+  note             String? @db.Text
+
+  reconciliation VendorReconciliation @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([reconciliationId])
+  @@map("vendor_reconciliation_items")
 }
 
 enum ContractStatus {
@@ -403,6 +531,7 @@ model CostAttachment {
 enum NotificationType {
   contract_expiry
   budget_approval
+  payment_overdue  // V2.0: Cảnh báo quá hạn thanh toán
   system
 }
 
@@ -647,28 +776,30 @@ enum IpType {
 }
 
 model HardwareAsset {
-  id             String          @id @default(uuid()) @db.Uuid
-  assetTag       String          @unique @map("asset_tag") @db.VarChar(50)
-  name           String          @db.VarChar(255)
-  category       String          @db.VarChar(100)
-  brand          String?         @db.VarChar(100)
-  model          String?         @db.VarChar(100)
-  serialNumber   String?         @map("serial_number") @db.VarChar(100)
-  specs          Json?           @db.JsonB
-  purchaseDate   DateTime?       @map("purchase_date")
-  warrantyExpiry DateTime?       @map("warranty_expiry")
-  location       String?         @db.VarChar(255)
-  assignedTo     String?         @map("assigned_to") @db.VarChar(255)
-  cost           Decimal?        @db.Decimal(18, 2)
-  status         HardAssetStatus @default(available)
-  notes          String?         @db.Text
-  vendorId       String?         @map("vendor_id") @db.Uuid
-  contractId     String?         @map("contract_id") @db.Uuid
-  createdById    String          @map("created_by_id") @db.Uuid
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
-  deletedAt      DateTime?       @map("deleted_at")
+  id               String          @id @default(uuid()) @db.Uuid
+  assetTag         String          @unique @map("asset_tag") @db.VarChar(50)
+  name             String          @db.VarChar(255)
+  category         String          @db.VarChar(100)
+  masterCategoryId String?         @map("master_category_id") @db.Uuid  // V2.0
+  brand            String?         @db.VarChar(100)
+  model            String?         @db.VarChar(100)
+  serialNumber     String?         @map("serial_number") @db.VarChar(100)
+  specs            Json?           @db.JsonB
+  purchaseDate     DateTime?       @map("purchase_date")
+  warrantyExpiry   DateTime?       @map("warranty_expiry")
+  location         String?         @db.VarChar(255)
+  assignedTo       String?         @map("assigned_to") @db.VarChar(255)
+  cost             Decimal?        @db.Decimal(18, 2)
+  status           HardAssetStatus @default(available)
+  notes            String?         @db.Text
+  vendorId         String?         @map("vendor_id") @db.Uuid
+  contractId       String?         @map("contract_id") @db.Uuid
+  createdById      String          @map("created_by_id") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  deletedAt        DateTime?       @map("deleted_at")
 
+  masterCategory MasterCategory? @relation("MasterCategoryHardware", fields: [masterCategoryId], references: [id])
   createdBy      User            @relation("CreatedHardware", fields: [createdById], references: [id])
   vendor         Vendor?         @relation("VendorHardware", fields: [vendorId], references: [id])
   contract       Contract?       @relation("ContractHardware", fields: [contractId], references: [id])
@@ -677,6 +808,7 @@ model HardwareAsset {
 
   @@index([status])
   @@index([category])
+  @@index([masterCategoryId])
   @@index([warrantyExpiry])
   @@index([vendorId])
   @@index([contractId])

@@ -12,6 +12,8 @@ import {
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+const PAYMENT_STATUSES = ['pending', 'partial_paid', 'paid', 'cancelled'] as const;
+
 export class CreateActualCostDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -67,8 +69,20 @@ export class CreateActualCostDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsIn(['pending', 'paid', 'cancelled'])
+  @IsIn(PAYMENT_STATUSES)
   paymentStatus?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  paidAmount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  paymentDueDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -146,8 +160,20 @@ export class UpdateActualCostDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsIn(['pending', 'paid', 'cancelled'])
+  @IsIn(PAYMENT_STATUSES)
   paymentStatus?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  paidAmount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  paymentDueDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -155,6 +181,19 @@ export class UpdateActualCostDto {
   paidAt?: string;
 
   @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+
+export class UpdatePaymentDto {
+  @ApiProperty({ description: 'Số tiền đã thanh toán' })
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  paidAmount: number;
+
+  @ApiPropertyOptional({ description: 'Ghi chú thanh toán' })
   @IsOptional()
   @IsString()
   note?: string;

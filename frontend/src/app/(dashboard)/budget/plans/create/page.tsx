@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
+import { MasterCategorySelect } from "@/components/shared/master-category-select";
 
 interface BudgetItem {
   name: string;
@@ -18,6 +19,7 @@ interface BudgetItem {
 
 interface BudgetCategory {
   name: string;
+  masterCategoryId: string;
   items: BudgetItem[];
 }
 
@@ -32,6 +34,7 @@ const emptyItem = (): BudgetItem => ({
 
 const emptyCategory = (): BudgetCategory => ({
   name: "",
+  masterCategoryId: "",
   items: [emptyItem()],
 });
 
@@ -111,7 +114,7 @@ export default function CreateBudgetPlanPage() {
     e.preventDefault();
     if (!name.trim()) return setError("Vui lòng nhập tên kế hoạch");
     if (categories.some((c) => !c.name.trim()))
-      return setError("Vui lòng nhập tên danh mục");
+      return setError("Vui lòng chọn danh mục");
     if (categories.some((c) => c.items.some((i) => !i.name.trim())))
       return setError("Vui lòng nhập tên hạng mục");
 
@@ -126,6 +129,7 @@ export default function CreateBudgetPlanPage() {
         description: description || undefined,
         categories: categories.map((cat) => ({
           name: cat.name,
+          masterCategoryId: cat.masterCategoryId || undefined,
           items: cat.items.map((item) => ({
             name: item.name,
             description: item.description || undefined,
@@ -257,14 +261,18 @@ export default function CreateBudgetPlanPage() {
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary">
                     {ci + 1}
                   </div>
-                  <input
-                    type="text"
-                    value={cat.name}
-                    onChange={(e) =>
-                      updateCategory(ci, "name", e.target.value)
-                    }
-                    placeholder="Tên danh mục (VD: Phần cứng)"
-                    className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  <MasterCategorySelect
+                    type="budget_category"
+                    value={cat.masterCategoryId}
+                    onChange={(id, label) => {
+                      setCategories((prev) =>
+                        prev.map((c, i) =>
+                          i === ci ? { ...c, masterCategoryId: id, name: label || id } : c
+                        )
+                      );
+                    }}
+                    placeholder="Chọn danh mục ngân sách"
+                    className="flex-1"
                   />
                 </div>
                 <div className="flex items-center gap-2 ml-3">

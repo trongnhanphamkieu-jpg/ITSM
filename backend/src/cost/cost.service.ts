@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { CreateActualCostDto, UpdateActualCostDto } from './dto/cost.dto';
+import { CreateActualCostDto, UpdateActualCostDto, UpdatePaymentDto } from './dto/cost.dto';
 
 @Injectable()
 export class CostService {
@@ -14,6 +14,7 @@ export class CostService {
     categoryName?: string;
     dateFrom?: string;
     dateTo?: string;
+    paymentStatus?: string;
   }) {
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -31,6 +32,10 @@ export class CostService {
 
     if (query.categoryName) {
       where.categoryName = query.categoryName;
+    }
+
+    if (query.paymentStatus) {
+      where.paymentStatus = query.paymentStatus;
     }
 
     if (query.dateFrom || query.dateTo) {
@@ -55,6 +60,9 @@ export class CostService {
           },
           vendorRef: {
             select: { id: true, name: true, code: true },
+          },
+          attachments: {
+            select: { id: true, fileName: true },
           },
         },
         orderBy: { costDate: 'desc' },
@@ -94,6 +102,9 @@ export class CostService {
         vendorRef: {
           select: { id: true, name: true, code: true },
         },
+        attachments: {
+          select: { id: true, fileName: true, fileSize: true, mimeType: true, storageKey: true, createdAt: true },
+        },
       },
     });
 
@@ -116,6 +127,8 @@ export class CostService {
       invoiceNo: dto.invoiceNo || undefined,
       poNumber: dto.poNumber || undefined,
       paymentStatus: (dto.paymentStatus as any) || undefined,
+      paidAmount: dto.paidAmount !== undefined ? dto.paidAmount : undefined,
+      paymentDueDate: dto.paymentDueDate ? new Date(dto.paymentDueDate) : undefined,
       paidAt: dto.paidAt ? new Date(dto.paidAt) : undefined,
       note: dto.note || undefined,
     };
@@ -155,6 +168,8 @@ export class CostService {
     if (dto.invoiceNo !== undefined) data.invoiceNo = dto.invoiceNo;
     if (dto.poNumber !== undefined) data.poNumber = dto.poNumber;
     if (dto.paymentStatus !== undefined) data.paymentStatus = dto.paymentStatus as any;
+    if (dto.paidAmount !== undefined) data.paidAmount = dto.paidAmount;
+    if (dto.paymentDueDate !== undefined) data.paymentDueDate = dto.paymentDueDate ? new Date(dto.paymentDueDate) : null;
     if (dto.paidAt !== undefined) data.paidAt = dto.paidAt ? new Date(dto.paidAt) : null;
     if (dto.note !== undefined) data.note = dto.note;
     if (dto.budgetItemId !== undefined) data.budgetItemId = dto.budgetItemId;
@@ -179,6 +194,53 @@ export class CostService {
     });
 
     return { success: true, data: cost };
+  }
+
+  /**
+   * Dedicated payment endpoint — auto-calculates status from paidAmount vs amount
+   */
+  async updatePayment(id: string, dto: UpdatePaymentDto) {
+    const { data: cost } = await this.findOne(id);
+    const amount = Number(cost.amount);
+    const paidAmount = dto.paidAmount;
+
+    if (paidAmount < 0) {
+      throw new BadRequestException('Số tiền thanh toán không hợp lệ');
+    }
+
+    let paymentStatus: string;
+    let paidAt: Date | null = cost.paidAt;
+
+    if (paidAmount <= 0) {
+      paymentStatus = 'pending';
+      paidAt = null;
+    } else if (paidAmount < amount) {
+      paymentStatus = 'partial_paid';
+    } else {
+      paymentStatus = 'paid';
+      paidAt = new Date();
+    }
+
+    const updateData: Prisma.ActualCostUncheckedUpdateInput = {
+      paidAmount,
+      paymentStatus: paymentStatus as any,
+      paidAt,
+    };
+
+    if (dto.note) {
+      updateData.note = dto.note;
+    }
+
+    const updated = await this.prisma.actualCost.update({
+      where: { id },
+      data: updateData,
+      include: {
+        createdBy: { select: { id: true, fullName: true } },
+        vendorRef: { select: { id: true, name: true, code: true } },
+      },
+    });
+
+    return { success: true, data: updated };
   }
 
   async remove(id: string) {
@@ -206,17 +268,23 @@ export class CostService {
     const currentYear = new Date().getFullYear();
     const startOfYear = new Date(currentYear, 0, 1);
 
-    const [totalSpent, monthlyCosts] = await Promise.all([
+    const [totalSpent, monthlyCosts, paymentSummary] = await Promise.all([
       this.prisma.actualCost.aggregate({
         _sum: { amount: true },
-        where: { costDate: { gte: startOfYear } },
+        where: { costDate: { gte: startOfYear }, deletedAt: null },
       }),
       this.prisma.$queryRaw<{ month: number; total: string }[]>`
         SELECT EXTRACT(MONTH FROM cost_date)::int as month, SUM(amount)::text as total
          FROM actual_costs
-         WHERE cost_date >= ${startOfYear}
+         WHERE cost_date >= ${startOfYear} AND deleted_at IS NULL
          GROUP BY month ORDER BY month
       `,
+      this.prisma.actualCost.groupBy({
+        by: ['paymentStatus'],
+        _sum: { amount: true },
+        _count: true,
+        where: { deletedAt: null },
+      }),
     ]);
 
     return {
@@ -224,6 +292,11 @@ export class CostService {
       data: {
         totalSpent: totalSpent._sum.amount || 0,
         monthlyCosts,
+        paymentSummary: paymentSummary.map((s) => ({
+          status: s.paymentStatus,
+          count: s._count,
+          totalAmount: s._sum.amount || 0,
+        })),
       },
     };
   }

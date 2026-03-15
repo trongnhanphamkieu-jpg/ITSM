@@ -12,7 +12,10 @@ import { BudgetStatus } from '@prisma/client';
 
 const PLAN_INCLUDE = {
   categories: {
-    include: { items: { orderBy: { sortOrder: 'asc' as const } } },
+    include: {
+      items: { orderBy: { sortOrder: 'asc' as const } },
+      masterCategory: { select: { id: true, code: true, name: true } },
+    },
     orderBy: { sortOrder: 'asc' as const },
   },
   createdBy: { select: { id: true, fullName: true, email: true } },
@@ -88,6 +91,7 @@ export class BudgetService {
         categories: {
           create: dto.categories.map((cat, ci) => ({
             name: cat.name,
+            masterCategoryId: cat.masterCategoryId || null,
             sortOrder: cat.sortOrder ?? ci,
             items: {
               create: cat.items.map((item, ii) => ({
@@ -144,11 +148,22 @@ export class BudgetService {
           where: { planId: id },
           include: { items: true },
         });
-        const existingCatMap = new Map(existingCats.map(c => [c.name, c]));
-        const incomingNames = new Set(dto.categories!.map(c => c.name));
+
+        // Build lookup: prefer masterCategoryId, fallback to name
+        const existingByMCId = new Map(existingCats.filter(c => c.masterCategoryId).map(c => [c.masterCategoryId!, c]));
+        const existingByName = new Map(existingCats.map(c => [c.name, c]));
+
+        // Build incoming keys
+        const incomingKeys = new Set<string>();
+        for (const cat of dto.categories!) {
+          incomingKeys.add(cat.masterCategoryId || cat.name);
+        }
 
         // Delete categories not in incoming data
-        const toDelete = existingCats.filter(c => !incomingNames.has(c.name));
+        const toDelete = existingCats.filter(c => {
+          const key = c.masterCategoryId || c.name;
+          return !incomingKeys.has(key);
+        });
         if (toDelete.length) {
           await tx.budgetCategory.deleteMany({
             where: { id: { in: toDelete.map(c => c.id) } },
@@ -158,13 +173,19 @@ export class BudgetService {
         // Upsert incoming categories
         for (let ci = 0; ci < dto.categories!.length; ci++) {
           const cat = dto.categories![ci];
-          const existing = existingCatMap.get(cat.name);
+          const existing = cat.masterCategoryId
+            ? existingByMCId.get(cat.masterCategoryId)
+            : existingByName.get(cat.name);
 
           if (existing) {
             // Update existing category
             await tx.budgetCategory.update({
               where: { id: existing.id },
-              data: { sortOrder: cat.sortOrder ?? ci },
+              data: {
+                name: cat.name,
+                masterCategoryId: cat.masterCategoryId || existing.masterCategoryId,
+                sortOrder: cat.sortOrder ?? ci,
+              },
             });
 
             // Replace items within existing category
@@ -188,6 +209,7 @@ export class BudgetService {
               data: {
                 planId: id,
                 name: cat.name,
+                masterCategoryId: cat.masterCategoryId || null,
                 sortOrder: cat.sortOrder ?? ci,
                 items: {
                   create: cat.items.map((item, ii) => ({

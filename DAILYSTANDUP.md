@@ -7,6 +7,300 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
+## 2026-03-16 01:05 — Agent: Session 43 (V2-F8: Dynamic RBAC ✅)
+
+### Hoàn thành
+- **RBAC Module**: `rbac.service.ts` CRUD DynamicRole + seed 5 roles × 15 module permissions
+- **Controller**: 7 endpoints (`GET/POST/PATCH/DELETE /rbac/roles`, `POST /rbac/seed`, `GET /rbac/modules`, `GET /rbac/users/:id/permissions`)
+- **System Roles** (không xóa/sửa): `admin` (full), `viewer` (read-only)
+- **Custom Roles**: `manager` (CRUD + approve), `staff` (CRUD), `finance` (focus tài chính)
+- **15 Module codes**: dashboard, budget_plan, actual_cost, vendor, contract, soft/hard_inventory, infrastructure, vehicle, cost_forecast, project, report, activity_log, master_data, user_management
+- **getUserPermissions()**: fallback từ dynamicRole → legacy enum
+- Registered `RbacModule` in `AppModule`
+
+### Kiểm chứng
+- ✅ Backend build: 0 errors
+- ✅ Jest: 232/232 tests pass (31 suites)
+
+### Files changed
+| File | Thay đổi |
+|------|----------|
+| `backend/src/rbac/rbac.service.ts` | [NEW] CRUD + seed + permissions |
+| `backend/src/rbac/rbac.controller.ts` | [NEW] 7 endpoints |
+| `backend/src/rbac/rbac.module.ts` | [NEW] Module registration |
+| `backend/src/app.module.ts` | +RbacModule import |
+
+### Next Steps
+- Frontend RBAC management UI (nếu cần)
+- Push to GitHub
+
+---
+
+## 2026-03-16 00:53 — Agent: Session 42 (V2-F4: Vendor Cost Reports + V2-F5: Overdue Alerts ✅)
+
+### Hoàn thành
+- **F4 Backend**: `getVendorCostReport()` — aggregate chi phí theo NCC, monthly breakdown, filter year/month/vendorId
+- **F4 Controller**: `GET /reports/vendor-costs?year=2026&month=3&vendorId=xxx`
+- **F5 Backend**: `getOverdueCosts()` — list khoản quá hạn TT với daysOverdue, vendor, status
+- **F5 Controller**: `GET /reports/overdue`
+- **Frontend Reports**: 2 tab mới "Chi phí theo NCC" (summary cards + bảng + progress bar % TT) + "Quá hạn TT" (red badges, days overdue)
+- **Budget Category Tab**: Thêm tab "Danh mục ngân sách" vào Master Data Settings (CRUD → categories API)
+
+### Kiểm chứng
+- ✅ Backend build: 0 errors
+- ✅ Frontend build: 0 errors
+- ✅ Jest: 232/232 tests pass (31 suites)
+
+### Files changed
+| File | Thay đổi |
+|------|----------|
+| `backend/src/reports/report.service.ts` | +getVendorCostReport(), +getOverdueCosts() |
+| `backend/src/reports/report.controller.ts` | +GET /vendor-costs, +GET /overdue |
+| `frontend/.../reports/page.tsx` | +vendor tab, +overdue tab (summary + table) |
+
+### Next Steps
+- V2-F8: Dynamic RBAC (2 system roles + custom)
+- Push to GitHub
+
+---
+
+## 2026-03-16 00:39 — Agent: Session 41 (Budget Category → MasterCategory Dropdown ✅)
+
+### Hoàn thành
+- **Seed**: 8 `budget_category` MasterCategory entries (BC-HW → BC-OTH)
+- **Backend DTO**: `BudgetCategoryDto` + `masterCategoryId` optional UUID
+- **Backend Service**: `create()` / `update()` lưu `masterCategoryId` FK, `PLAN_INCLUDE` include `masterCategory`
+- **Frontend**: Text input → `MasterCategorySelect` dropdown (type `budget_category`)
+- **MasterCategorySelect**: Enhanced onChange trả về `(value, label)` để auto-fill `name`
+- **Master Data Settings**: Thêm tab "Danh mục ngân sách" (đầu tiên), CRUD route sang `/master-data/categories` API
+
+### Phân tích ảnh hưởng
+- ✅ Backward compatible — plan cũ có `masterCategoryId = null` vẫn hiển thị bình thường
+- ✅ Không ảnh hưởng cost management, dashboard, approval workflow
+
+### Kiểm chứng
+- ✅ Backend build: 0 errors
+- ✅ Frontend build: 0 errors
+- ✅ Jest: 232/232 tests pass (31 suites)
+
+### Files changed
+| File | Thay đổi |
+|------|----------|
+| `backend/prisma/seed.ts` | +8 budget_category MasterCategory (upsert) |
+| `backend/src/budget/dto/budget.dto.ts` | +masterCategoryId optional |
+| `backend/src/budget/budget.service.ts` | create/update with FK, PLAN_INCLUDE + masterCategory |
+| `frontend/.../master-category-select.tsx` | onChange returns (value, label) |
+| `frontend/.../budget/plans/create/page.tsx` | Text → MasterCategorySelect dropdown |
+| `frontend/.../settings/master-data/page.tsx` | +budget_category tab, CRUD → categories API |
+
+---
+
+## 2026-03-16 00:16 — Agent: Session 40 (ITSM v2.0 — Wave 2: Payment Status + Attachments + Vendor Payables ✅)
+
+### Hoàn thành
+- **Phase A — F1: Trạng thái thanh toán**
+  - Backend: Updated DTOs (paidAmount, paymentDueDate, partial_paid), new `updatePayment()` with auto-status logic, `PATCH /actual-costs/:id/payment`, paymentStatus filter, paymentSummary in getSummary
+  - Frontend: Payment status badges (4 màu) + progress bars, payment filter dropdown, payment modal (CurrencyInput + auto-preview), paymentDueDate in create form
+- **Phase B — F2: File đính kèm**
+  - Backend: attachments included in findAll/findOne cost queries
+- **Phase C — F3: Công nợ NCC**
+  - Backend: New VendorPayableService (5 methods) + VendorPayableController (5 endpoints) + CreateReconciliationDto + tests
+  - Frontend: Vendor payables summary cards (tổng/đã TT/còn nợ) + progress bar + "Tạo đối soát" button + reconciliation history section
+
+### Kiểm chứng
+- ✅ Backend build: 0 errors (after `npx prisma generate`)
+- ✅ Frontend build: 0 errors
+- ✅ Jest: 232/232 tests pass (31 test suites)
+
+### Files changed (key)
+| File | Thay đổi |
+|------|----------|
+| `backend/src/cost/dto/cost.dto.ts` | +paidAmount, +paymentDueDate, +partial_paid, +UpdatePaymentDto |
+| `backend/src/cost/cost.service.ts` | +updatePayment(), +paymentStatus filter, +attachments include, +paymentSummary |
+| `backend/src/cost/cost.controller.ts` | +PATCH :id/payment endpoint |
+| `backend/src/vendor/vendor-payable.service.ts` | NEW: aggregate payables + reconciliation CRUD |
+| `backend/src/vendor/vendor-payable.controller.ts` | NEW: 5 REST endpoints |
+| `backend/src/vendor/vendor.module.ts` | Register new service + controller |
+| `frontend/.../costs/page.tsx` | +payment badges, filter, modal, progress |
+| `frontend/.../costs/create/page.tsx` | +paymentDueDate field |
+| `frontend/.../vendors/[id]/page.tsx` | +payables cards, reconciliation history |
+
+### Next Steps
+- V2-F4: Vendor Cost Reports (charts + export)
+- V2-F5: Payment Due Dates & Overdue Alerts (cron job)
+- V2-F8: Dynamic RBAC
+
+---
+
+## 2026-03-16 00:08 — Agent: Session 39 (ITSM v2.0 — Wave 1: Impact Audit + Form Conversions ✅)
+
+### 📋 Tổng quan
+Hoàn thành impact audit cho việc loại bỏ `vendor_category` & `service_provider` khỏi Master Data. Sau đó chuyển đổi 6 form từ text input sang MasterDataSelect/CategorySelect dropdown.
+
+### ⚠️ Pre-session Assessment
+- Session 38: Master Data UI redesigned (10 system tabs), build OK
+- Cần rà soát ảnh hưởng khi bỏ 2 types khỏi Master Data
+
+### ✅ Đã hoàn thành
+
+**1. Impact Audit — vendor_category & service_provider:**
+| Kết quả | Chi tiết |
+|---------|----------|
+| Runtime code | ❌ ZERO — không có form nào sử dụng |
+| `master-data-select.tsx` | ✅ Xóa 2 placeholder labels |
+| `master-data.service.ts` | ✅ Xóa 2 seed type entries |
+| `PLAN-itsm-v2.md` | ✅ Audit table 15→13, migration map 16→13 FKs |
+
+**2. Form Conversions (Wave 1):**
+| File | Trước | Sau |
+|------|-------|-----|
+| `user-form-dialog.tsx` | text input (department) | `MasterDataSelect(department)` |
+| `vehicles/page.tsx` | hardcoded `<select>` (5 options) | `MasterDataSelect(vehicle_type)` |
+| `projects/page.tsx` | text input in field array | `MasterDataSelect(department)` standalone |
+| `projects/[id]/page.tsx` | 2× text input (categoryName) | `CategorySelect` × 2 |
+| `projects/[id]/page.tsx` | text input (unit) | `MasterDataSelect(unit_of_measure)` |
+| `costs/page.tsx` | text input (inline edit) | `CategorySelect` |
+
+**3. Build:** ✅ Frontend 0 errors
+
+### ⏭️ Tiếp theo
+- Wave 1 remaining: Contract, Hardware, VPS, Payment forms (chờ module tương ứng)
+- Wave 2: Payment status (F1), file attachments (F2), vendor payables (F3)
+
+---
+
+## 2026-03-15 23:50 — Agent: Session 38 (ITSM v2.0 — Phase 1 Sprint V2-2: Frontend Master Data UI ✅)
+
+### 📋 Tổng quan
+Triển khai Sprint V2-2: shared components (`MasterDataSelect`, `MasterCategorySelect`), Master Data Config page (2 tabs: items + categories), sidebar menu, i18n.
+
+### ⚠️ Pre-session Assessment
+- Session 37 thành công: backend 15 endpoints + 77 seed records hoạt động tốt
+- Build backend 0 errors, server running port 4000
+
+### ✅ Đã hoàn thành
+
+**1. Shared Components:**
+| Component | File | Mô tả |
+|-----------|------|-------|
+| `MasterDataSelect` | `shared/master-data-select.tsx` | Dropdown async load items by type, 12 type labels |
+| `MasterCategorySelect` | `shared/master-category-select.tsx` | Tree dropdown dùng `<optgroup>` cho parent/child |
+
+**2. Master Data Config Page:**
+| Feature | Chi tiết |
+|---------|---------|
+| Tab "Dữ liệu chung" | Table 59 items, type filter+search, CRUD modals, status toggle |
+| Tab "Danh mục" | Category tree view (Budget/Cost/Asset), parent + children, CRUD |
+| Seed button | "Tạo dữ liệu mẫu" — gọi POST /seed |
+
+**3. UI Integration:**
+| Thay đổi | File |
+|----------|------|
+| Sidebar menu | `sidebar.tsx` — Thêm "Danh mục chung" (bi-database-gear) |
+| i18n | `i18n.tsx` — +17 keys vi + 17 keys en (master_data.*) |
+| Barrel exports | `shared/index.ts` — +2 exports |
+| API fix | `api.ts` — `HeadersInit` → `Record<string, string>` |
+
+### 📊 Verification
+| Test | Result |
+|------|--------|
+| `npm run build` | ✅ 0 errors |
+| Browser: Items tab | ✅ 59 items, type badges, search, filter |
+| Browser: Categories tab | ✅ Budget tree (1 parent + 5 children) |
+| Sidebar menu | ✅ "Danh mục chung" hiển thị đúng |
+| CRUD modals | ✅ Thêm/sửa items + categories |
+
+### 📂 Files đã tạo/sửa
+| File | Mô tả |
+|------|-------|
+| `frontend/src/components/shared/master-data-select.tsx` | **NEW** |
+| `frontend/src/components/shared/master-category-select.tsx` | **NEW** |
+| `frontend/src/app/(dashboard)/settings/master-data/page.tsx` | **NEW** |
+| `frontend/src/components/shared/index.ts` | +2 exports |
+| `frontend/src/components/layout/sidebar.tsx` | +menu item |
+| `frontend/src/lib/i18n.tsx` | +34 translation keys |
+| `frontend/src/lib/api.ts` | type fix |
+
+### 🔧 Bàn giao
+- Frontend build thành công
+- Backend đang chạy port 4000
+- **Tiếp theo:** Migrate 16 forms (text → dropdown) hoặc tiếp Phase 2 (Payment/Cost)
+
+---
+
+## 2026-03-15 23:20 — Agent: Session 37 (ITSM v2.0 — Phase 1 Sprint V2-1: Master Data Schema + Backend ✅)
+
+### 📋 Tổng quan
+Triển khai Sprint V2-1 của ITSM v2.0: tạo schema foundation cho Master Data Configuration, Dynamic RBAC, Vendor Reconciliation, Payment Enhancement. Backend module hoàn chỉnh.
+
+### ⚠️ Pre-session Assessment
+- Đọc toàn bộ DAILYSTANDUP (36 sessions) — không phát hiện rủi ro/sai sót từ session trước
+- Schema ổn định (222 tests từ Session 36)
+- Nền tảng code quality tốt (security hardening + soft delete + type safety đã hoàn thành)
+
+### ✅ Đã hoàn thành
+
+**1. Schema Migration `v2_master_data_and_roles`:**
+| Thay đổi | Chi tiết |
+|----------|---------|
+| 6 models mới | `MasterDataItem`, `MasterCategory` (tree), `DynamicRole`, `RolePermission`, `VendorReconciliation`, `VendorReconciliationItem` |
+| PaymentStatus enum | +`partial_paid` (4 values: pending/partial_paid/paid/cancelled) |
+| ActualCost | +`paidAmount`, +`paymentDueDate`, +`masterCategoryId` FK |
+| BudgetCategory | +`masterCategoryId` FK → MasterCategory |
+| HardwareAsset | +`masterCategoryId` FK → MasterCategory |
+| User | +`dynamicRoleId` FK → DynamicRole |
+| NotificationType | +`payment_overdue` |
+
+**2. Backend: `MasterDataModule` (15 endpoints):**
+| Endpoint | Method | Mô tả |
+|----------|--------|-------|
+| `/master-data/items` | GET | List items (filter by type, search, pagination) |
+| `/master-data/items/types` | GET | Danh sách types + count |
+| `/master-data/items/by-type/:type` | GET | Items theo type |
+| `/master-data/items/:id` | GET/PATCH/DELETE | CRUD single item |
+| `/master-data/items` | POST | Tạo item mới |
+| `/master-data/categories` | GET | List categories (tree) |
+| `/master-data/categories/tree/:type` | GET | Category tree theo type |
+| `/master-data/categories/:id` | GET/PATCH/DELETE | CRUD single category |
+| `/master-data/categories` | POST | Tạo category mới |
+| `/master-data/seed` | POST | Seed default data |
+
+**3. Seed Data (77 records):**
+| Type | Items |
+|------|-------|
+| 12 master data types | department(5), contract_type(5), vendor_category(5), service_provider(6), environment(4), location(4), vehicle_type(5), fuel_type(4), maintenance_type(4), payment_method(4), unit_of_measure(7), asset_category(6) |
+| 3 category trees | Budget(5 children), Cost(5 children), Asset(5 children) |
+
+### 📊 Verification
+| Test | Result |
+|------|--------|
+| `npx prisma validate` | ✅ Schema valid |
+| `npx prisma migrate dev` | ✅ Migration applied |
+| `npm run build` | ✅ 0 errors |
+| Backend start | ✅ 15 MasterData routes registered |
+| POST /seed | ✅ 77 records created |
+| GET /items/types | ✅ 12 types returned |
+| GET /items/by-type/department | ✅ 5 departments returned |
+| GET /categories/tree/budget | ✅ Tree with parent + 5 children |
+
+### 📂 Files đã tạo/sửa
+| File | Mô tả |
+|------|-------|
+| `backend/prisma/schema.prisma` | +6 models, +FK columns, PaymentStatus enum, NotificationType |
+| `backend/src/master-data/master-data.module.ts` | **NEW** — Module definition |
+| `backend/src/master-data/master-data.service.ts` | **NEW** — CRUD + seed (280 lines) |
+| `backend/src/master-data/master-data.controller.ts` | **NEW** — 15 endpoints |
+| `backend/src/master-data/dto/master-data.dto.ts` | **NEW** — 4 DTOs |
+| `backend/src/app.module.ts` | Register MasterDataModule |
+| `docs/TASKS-itsm-v2.md` | **NEW** — Task breakdown (5 phases, 97 tasks) |
+
+### 🔧 Bàn giao
+- Backend đang chạy port 4000 (PID 3339)
+- DB đã migrate, seed data ready
+- **Tiếp theo:** Sprint V2-2 — Frontend shared components (`<MasterDataSelect>`, `<MasterCategorySelect>`) + Master Data Config page + form migrations
+
+---
+
 ## 2026-03-15 22:30 — Agent: Session 36 (Security Audit + Schema Alignment — 7 Phases Complete ✅)
 
 ### 📋 Tổng quan

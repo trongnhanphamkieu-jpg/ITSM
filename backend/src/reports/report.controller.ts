@@ -31,4 +31,24 @@ export class ReportController {
   getProjectBudget(@Query('year') year?: string) {
     return this.svc.getProjectBudgetReport(year ? +year : undefined);
   }
+
+  @Get('vendor-costs')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getVendorCosts(
+    @Query('year') year?: string,
+    @Query('month') month?: string,
+    @Query('vendorId') vendorId?: string,
+  ) {
+    return this.svc.getVendorCostReport(
+      year ? +year : new Date().getFullYear(),
+      month ? +month : undefined,
+      vendorId || undefined,
+    );
+  }
+
+  @Get('overdue')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getOverdue() {
+    return this.svc.getOverdueCosts();
+  }
 }

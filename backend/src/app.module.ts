@@ -24,6 +24,8 @@ import { AuditInterceptor } from './activity-log/audit.interceptor';
 import { CacheModule } from './cache/cache.module';
 import { HealthController } from './health.controller';
 import { FileModule } from './file/file.module';
+import { MasterDataModule } from './master-data/master-data.module';
+import { RbacModule } from './rbac/rbac.module';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
 
 @Module({
@@ -52,6 +54,8 @@ import { LoggingMiddleware } from './common/middleware/logging.middleware';
     ActivityLogModule,
     ReportModule,
     FileModule,
+    MasterDataModule,
+    RbacModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

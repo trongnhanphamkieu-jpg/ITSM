@@ -149,4 +149,125 @@ export class ReportService {
       };
     });
   }
+
+  // ── V2-F4: Vendor Cost Report ──
+
+  async getVendorCostReport(year: number, month?: number, vendorId?: string) {
+    const dateFrom = new Date(year, (month ?? 1) - 1, 1);
+    const dateTo = month
+      ? new Date(year, month, 1)
+      : new Date(year + 1, 0, 1);
+
+    const where: Record<string, unknown> = {
+      costDate: { gte: dateFrom, lt: dateTo },
+      vendorId: { not: null },
+    };
+    if (vendorId) where.vendorId = vendorId;
+
+    const costs = await this.prisma.actualCost.findMany({
+      where,
+      include: {
+        vendorRef: { select: { id: true, name: true } },
+      },
+      orderBy: { costDate: 'asc' },
+    });
+
+    // Group by vendor
+    const vendorMap = new Map<string, {
+      vendorId: string;
+      vendorName: string;
+      totalCost: number;
+      paidAmount: number;
+      unpaidAmount: number;
+      costsByMonth: Map<number, { totalCost: number; paidAmount: number }>;
+    }>();
+
+    for (const c of costs) {
+      const vId = c.vendorId!;
+      const vName = c.vendorRef?.name || c.vendor || 'Không xác định';
+      const amt = Number(c.amount);
+      const paid = Number(c.paidAmount || 0);
+      const m = new Date(c.costDate).getMonth() + 1;
+
+      if (!vendorMap.has(vId)) {
+        vendorMap.set(vId, {
+          vendorId: vId,
+          vendorName: vName,
+          totalCost: 0,
+          paidAmount: 0,
+          unpaidAmount: 0,
+          costsByMonth: new Map(),
+        });
+      }
+
+      const v = vendorMap.get(vId)!;
+      v.totalCost += amt;
+      v.paidAmount += paid;
+      v.unpaidAmount += (amt - paid);
+
+      if (!v.costsByMonth.has(m)) {
+        v.costsByMonth.set(m, { totalCost: 0, paidAmount: 0 });
+      }
+      const mb = v.costsByMonth.get(m)!;
+      mb.totalCost += amt;
+      mb.paidAmount += paid;
+    }
+
+    const vendors = Array.from(vendorMap.values())
+      .sort((a, b) => b.totalCost - a.totalCost)
+      .map((v) => ({
+        vendorId: v.vendorId,
+        vendorName: v.vendorName,
+        totalCost: v.totalCost,
+        paidAmount: v.paidAmount,
+        unpaidAmount: v.unpaidAmount,
+        costsByMonth: Array.from(v.costsByMonth.entries())
+          .sort(([a], [b]) => a - b)
+          .map(([mo, data]) => ({ month: mo, totalCost: data.totalCost, paidAmount: data.paidAmount })),
+      }));
+
+    const summary = {
+      totalAll: vendors.reduce((s, v) => s + v.totalCost, 0),
+      totalPaid: vendors.reduce((s, v) => s + v.paidAmount, 0),
+      totalUnpaid: vendors.reduce((s, v) => s + v.unpaidAmount, 0),
+      vendorCount: vendors.length,
+    };
+
+    return { year, month: month || null, vendors, summary };
+  }
+
+  // ── V2-F5: Overdue Costs ──
+
+  async getOverdueCosts() {
+    const now = new Date();
+    const costs = await this.prisma.actualCost.findMany({
+      where: {
+        paymentDueDate: { lt: now },
+        paymentStatus: { in: ['pending', 'partial_paid'] },
+      },
+      include: {
+        vendorRef: { select: { id: true, name: true } },
+        createdBy: { select: { id: true, fullName: true } },
+      },
+      orderBy: { paymentDueDate: 'asc' },
+    });
+
+    return {
+      totalOverdue: costs.length,
+      totalAmount: costs.reduce((s, c) => s + Number(c.amount), 0),
+      totalUnpaid: costs.reduce((s, c) => s + (Number(c.amount) - Number(c.paidAmount || 0)), 0),
+      items: costs.map((c) => ({
+        id: c.id,
+        description: c.description,
+        amount: Number(c.amount),
+        paidAmount: Number(c.paidAmount || 0),
+        unpaidAmount: Number(c.amount) - Number(c.paidAmount || 0),
+        paymentStatus: c.paymentStatus,
+        paymentDueDate: c.paymentDueDate,
+        daysOverdue: Math.floor((now.getTime() - new Date(c.paymentDueDate!).getTime()) / 86400000),
+        vendor: c.vendorRef?.name || c.vendor || null,
+        createdBy: c.createdBy?.fullName || null,
+      })),
+    };
+  }
 }

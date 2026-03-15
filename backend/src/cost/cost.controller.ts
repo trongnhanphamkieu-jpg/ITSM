@@ -14,7 +14,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { CostService } from './cost.service';
-import { CreateActualCostDto, UpdateActualCostDto } from './dto/cost.dto';
+import { CreateActualCostDto, UpdateActualCostDto, UpdatePaymentDto } from './dto/cost.dto';
 
 @ApiTags('Actual Costs')
 @ApiBearerAuth()
@@ -32,6 +32,7 @@ export class CostController {
     @Query('categoryName') categoryName?: string,
     @Query('dateFrom') dateFrom?: string,
     @Query('dateTo') dateTo?: string,
+    @Query('paymentStatus') paymentStatus?: string,
   ) {
     return this.costService.findAll({
       page: page ? parseInt(page) : undefined,
@@ -40,6 +41,7 @@ export class CostController {
       categoryName,
       dateFrom,
       dateTo,
+      paymentStatus,
     });
   }
 
@@ -71,6 +73,12 @@ export class CostController {
   @Roles('admin', 'manager', 'staff')
   update(@Param('id') id: string, @Body() dto: UpdateActualCostDto) {
     return this.costService.update(id, dto);
+  }
+
+  @Patch(':id/payment')
+  @Roles('admin', 'manager', 'finance')
+  updatePayment(@Param('id') id: string, @Body() dto: UpdatePaymentDto) {
+    return this.costService.updatePayment(id, dto);
   }
 
   @Delete(':id')

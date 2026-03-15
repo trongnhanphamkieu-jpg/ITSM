@@ -67,6 +67,10 @@ export default function VendorDetailPage() {
   });
   const [vendorCosts, setVendorCosts] = useState<any[]>([]);
   const [vendorAssets, setVendorAssets] = useState<{soft: any[], hard: any[]}>({soft: [], hard: []});
+  // Payables
+  const [payables, setPayables] = useState<any>(null);
+  const [reconciliations, setReconciliations] = useState<any[]>([]);
+  const [reconLoading, setReconLoading] = useState(false);
 
   const fetchVendor = useCallback(async () => {
     try {
@@ -103,6 +107,14 @@ export default function VendorDetailPage() {
         hard: (hardware.data || []).map((h: any) => ({...h, _type: 'Phần cứng'})),
       });
     });
+    // Fetch payables
+    api.get<any>(`/vendors/${vendor.id}/payables`)
+      .then(res => setPayables(res.data || null))
+      .catch(() => {});
+    // Fetch reconciliations
+    api.get<any>(`/vendors/${vendor.id}/reconciliations`)
+      .then(res => setReconciliations(res.data || []))
+      .catch(() => {});
   }, [vendor]);
 
   if (loading) {
@@ -387,6 +399,97 @@ export default function VendorDetailPage() {
           </>
         )}
       </div>
+
+      {/* Vendor Payables - V2 */}
+      {payables && (
+        <div className="rounded-xl border border-border bg-surface shadow-sm">
+          <div className="flex items-center justify-between border-b border-border px-6 py-4">
+            <h3 className="text-base font-semibold text-foreground">
+              <i className="bi bi-wallet2 mr-2" />Công nợ
+            </h3>
+            <button
+              onClick={async () => {
+                if (!payables?.costs?.length) return;
+                const unpaidIds = payables.costs
+                  .filter((c: any) => c.unpaid > 0)
+                  .map((c: any) => c.id);
+                if (unpaidIds.length === 0) { alert('Không có công nợ cần đối soát'); return; }
+                setReconLoading(true);
+                try {
+                  await api.post(`/vendors/${vendor.id}/reconciliations`, {
+                    costIds: unpaidIds,
+                    notes: `Đối soát ${new Date().toLocaleDateString('vi-VN')}`,
+                  });
+                  const res = await api.get<any>(`/vendors/${vendor.id}/reconciliations`);
+                  setReconciliations(res.data || []);
+                } catch { /* err */ } finally { setReconLoading(false); }
+              }}
+              disabled={reconLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-white hover:bg-primary-dark disabled:opacity-50"
+            >
+              <i className="bi bi-check2-square" />
+              {reconLoading ? 'Đang tạo...' : 'Tạo đối soát'}
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-4 p-6">
+            <div className="rounded-lg bg-muted/30 p-4 text-center">
+              <p className="text-xs text-foreground/60 uppercase">Tổng chi phí</p>
+              <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(payables.totalAmount)}</p>
+            </div>
+            <div className="rounded-lg bg-emerald-50 p-4 text-center">
+              <p className="text-xs text-emerald-600 uppercase">Đã thanh toán</p>
+              <p className="text-xl font-bold text-emerald-700 mt-1">{formatCurrency(payables.totalPaid)}</p>
+            </div>
+            <div className="rounded-lg bg-orange-50 p-4 text-center">
+              <p className="text-xs text-orange-600 uppercase">Còn nợ</p>
+              <p className="text-xl font-bold text-orange-700 mt-1">{formatCurrency(payables.totalUnpaid)}</p>
+            </div>
+          </div>
+          {payables.totalAmount > 0 && (
+            <div className="px-6 pb-4">
+              <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${Math.min(Math.round((payables.totalPaid / payables.totalAmount) * 100), 100)}%` }}
+                />
+              </div>
+              <p className="mt-1 text-xs text-foreground/60 text-right">
+                {Math.round((payables.totalPaid / payables.totalAmount) * 100)}% đã TT
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reconciliation History */}
+      {reconciliations.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface shadow-sm">
+          <div className="border-b border-border px-6 py-4">
+            <h3 className="text-base font-semibold text-foreground">
+              <i className="bi bi-clock-history mr-2" />Lịch sử đối soát ({reconciliations.length})
+            </h3>
+          </div>
+          <div className="divide-y divide-border">
+            {reconciliations.map((r: any) => (
+              <div key={r.id} className="flex items-center justify-between px-6 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {new Date(r.reconciliationDate).toLocaleDateString('vi-VN')}
+                  </p>
+                  <p className="text-xs text-foreground/60">
+                    {r.confirmer?.fullName} · {r._count?.items || 0} khoản
+                  </p>
+                  {r.notes && <p className="text-xs text-foreground/50 mt-0.5">{r.notes}</p>}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-foreground/60">Tổng nợ</p>
+                  <p className="text-sm font-bold text-orange-700">{formatCurrency(Number(r.totalOutstanding))}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Related Costs - B3 */}
       <div className="rounded-xl border border-border bg-surface shadow-sm">

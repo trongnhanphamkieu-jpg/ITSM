@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { MasterDataSelect } from "@/components/shared";
 
 interface User {
   id: string;
@@ -186,11 +187,11 @@ export function UserFormDialog({
               <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Phòng ban
               </label>
-              <input
+              <MasterDataSelect
+                type="department"
                 value={form.department}
-                onChange={(e) => update("department", e.target.value)}
-                placeholder="Phòng CNTT"
-                className="w-full rounded-lg border border-input bg-background px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+                onChange={(v) => update("department", v)}
+                placeholder="Chọn phòng ban"
               />
             </div>
 

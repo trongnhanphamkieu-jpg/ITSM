@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
+import { MasterDataSelect } from "@/components/shared";
 
 interface Project {
   id: string;
@@ -444,7 +445,6 @@ export default function ProjectBudgetPage() {
               {[
                 { key: "code", label: "Mã dự án", type: "text", required: true },
                 { key: "name", label: "Tên dự án", type: "text", required: true },
-                { key: "department", label: "Bộ phận phụ trách", type: "text" },
                 { key: "startDate", label: "Ngày bắt đầu", type: "date" },
                 { key: "endDate", label: "Ngày kết thúc", type: "date" },
               ].map((f) => (
@@ -460,6 +460,17 @@ export default function ProjectBudgetPage() {
                   />
                 </div>
               ))}
+              <div>
+                <label className="block text-sm font-medium text-card-foreground mb-1.5">
+                  Bộ phận phụ trách
+                </label>
+                <MasterDataSelect
+                  type="department"
+                  value={form.department}
+                  onChange={(v) => setForm({ ...form, department: v })}
+                  placeholder="Chọn phòng ban"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-card-foreground mb-1.5">Trạng thái</label>
                 <select
