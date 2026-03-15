@@ -51,6 +51,8 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [vendorStats, setVendorStats] = useState<{name: string; total: number}[]>([]);
+  const [overdueData, setOverdueData] = useState<{totalOverdue: number; totalUnpaid: number; items: any[]} | null>(null);
+  const [paymentStats, setPaymentStats] = useState<{status: string; count: number; totalAmount: number}[]>([]);
 
   // Filter state
   const currentYear = new Date().getFullYear();
@@ -200,6 +202,20 @@ export default function DashboardPage() {
           .slice(0, 5);
         setVendorStats(sorted);
       })
+      .catch(() => {});
+  }, []);
+
+  // Fetch overdue payments
+  useEffect(() => {
+    api.get<any>("/reports/overdue")
+      .then(res => setOverdueData(res))
+      .catch(() => {});
+  }, []);
+
+  // Fetch payment status summary
+  useEffect(() => {
+    api.get<any>("/actual-costs/summary")
+      .then(res => setPaymentStats(res.data?.paymentSummary || []))
       .catch(() => {});
   }, []);
 
@@ -424,6 +440,71 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+      {/* Payment Status Summary */}
+      {paymentStats.length > 0 && (
+        <div className="mt-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-card-foreground mb-4 flex items-center gap-2">
+            <i className="bi bi-credit-card text-primary" /> Tổng quan thanh toán
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {paymentStats.map((s) => {
+              const colors: Record<string, string> = {
+                pending: "text-orange-400", partial_paid: "text-blue-400",
+                paid: "text-emerald-400", cancelled: "text-gray-400",
+              };
+              const labels: Record<string, string> = {
+                pending: "Chưa TT", partial_paid: "TT 1 phần",
+                paid: "Đã TT", cancelled: "Đã hủy",
+              };
+              return (
+                <div key={s.status} className="text-center">
+                  <p className="text-xs text-muted-foreground font-semibold uppercase">{labels[s.status] || s.status}</p>
+                  <p className={`text-2xl font-bold mt-1 ${colors[s.status] || "text-foreground"}`}>{s.count}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{formatShort(Number(s.totalAmount || 0))}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Overdue Payments Widget */}
+      {overdueData && overdueData.totalOverdue > 0 && (
+        <div className="mt-6 rounded-xl border border-red-500/30 bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-card-foreground flex items-center gap-2">
+              <i className="bi bi-exclamation-triangle-fill text-red-400" /> Giao dịch quá hạn thanh toán
+            </h2>
+            <Link href="/reports" className="text-sm text-primary hover:underline">Xem tất cả →</Link>
+          </div>
+          <div className="flex gap-6 mb-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Số khoản</p>
+              <p className="text-xl font-bold text-red-400">{overdueData.totalOverdue}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Tổng còn nợ</p>
+              <p className="text-xl font-bold text-red-400">{formatShort(overdueData.totalUnpaid)}</p>
+            </div>
+          </div>
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {overdueData.items.slice(0, 5).map((item: any) => (
+              <div key={item.id} className="flex items-center justify-between rounded-lg border border-border p-2.5 hover:bg-muted/30 transition">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
+                  <p className="text-xs text-muted-foreground">{item.vendor || "—"}</p>
+                </div>
+                <div className="text-right ml-3">
+                  <p className="text-sm font-bold text-red-400">{formatCurrency(item.unpaidAmount)}</p>
+                  <span className={`text-xs font-bold ${item.daysOverdue > 30 ? "text-red-400" : item.daysOverdue > 7 ? "text-orange-400" : "text-yellow-400"}`}>
+                    {item.daysOverdue} ngày
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
