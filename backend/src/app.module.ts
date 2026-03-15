@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -23,6 +23,8 @@ import { ReportModule } from './reports/report.module';
 import { AuditInterceptor } from './activity-log/audit.interceptor';
 import { CacheModule } from './cache/cache.module';
 import { HealthController } from './health.controller';
+import { FileModule } from './file/file.module';
+import { LoggingMiddleware } from './common/middleware/logging.middleware';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { HealthController } from './health.controller';
     CostForecastModule,
     ActivityLogModule,
     ReportModule,
+    FileModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
@@ -56,5 +59,8 @@ import { HealthController } from './health.controller';
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
-export class AppModule {}
-
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggingMiddleware).forRoutes('*');
+  }
+}

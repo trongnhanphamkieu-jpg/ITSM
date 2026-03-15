@@ -21,7 +21,7 @@ describe('ContractService', () => {
     prisma = {
       contract: {
         findMany: jest.fn().mockResolvedValue([mockContract]),
-        findUnique: jest.fn(),
+        findFirst: jest.fn(),
         count: jest.fn().mockResolvedValue(1),
         create: jest.fn().mockResolvedValue(mockContract),
         update: jest.fn().mockResolvedValue(mockContract),
@@ -56,13 +56,13 @@ describe('ContractService', () => {
 
   describe('findOne', () => {
     it('should return contract by id', async () => {
-      prisma.contract.findUnique.mockResolvedValue(mockContract);
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
       const result = await service.findOne('ct1');
       expect(result.success).toBe(true);
     });
 
     it('should throw NotFoundException', async () => {
-      prisma.contract.findUnique.mockResolvedValue(null);
+      prisma.contract.findFirst.mockResolvedValue(null);
       await expect(service.findOne('x')).rejects.toThrow(NotFoundException);
     });
   });
@@ -79,7 +79,7 @@ describe('ContractService', () => {
 
   describe('update', () => {
     it('should update contract', async () => {
-      prisma.contract.findUnique.mockResolvedValue(mockContract);
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
       const result = await service.update('ct1', { name: 'Updated' } as any);
       expect(result.success).toBe(true);
     });
@@ -87,7 +87,7 @@ describe('ContractService', () => {
 
   describe('remove', () => {
     it('should delete contract', async () => {
-      prisma.contract.findUnique.mockResolvedValue(mockContract);
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
       const result = await service.remove('ct1');
       expect(result.success).toBe(true);
     });
@@ -95,7 +95,7 @@ describe('ContractService', () => {
 
   describe('addAttachment', () => {
     it('should add attachment to contract', async () => {
-      prisma.contract.findUnique.mockResolvedValue(mockContract);
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
       const result = await service.addAttachment('ct1', {
         fileName: 'doc.pdf', fileSize: 1024, mimeType: 'application/pdf', storageKey: 'k1',
       }, 'u1');
@@ -105,14 +105,14 @@ describe('ContractService', () => {
 
   describe('removeAttachment', () => {
     it('should remove attachment', async () => {
-      prisma.contract.findUnique.mockResolvedValue(mockContract);
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
       prisma.contractAttachment.findFirst.mockResolvedValue({ id: 'a1' });
       const result = await service.removeAttachment('ct1', 'a1');
       expect(result.success).toBe(true);
     });
 
     it('should throw if attachment not found', async () => {
-      prisma.contract.findUnique.mockResolvedValue(mockContract);
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
       prisma.contractAttachment.findFirst.mockResolvedValue(null);
       await expect(service.removeAttachment('ct1', 'x')).rejects.toThrow(NotFoundException);
     });
@@ -122,6 +122,29 @@ describe('ContractService', () => {
     it('should find contracts expiring in N days', async () => {
       const result = await service.getExpiringContracts(30);
       expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('soft delete', () => {
+    it('should set deletedAt on remove instead of hard delete', async () => {
+      prisma.contract.findFirst.mockResolvedValue(mockContract);
+      prisma.contract.update.mockResolvedValue({ ...mockContract, deletedAt: new Date() });
+      await service.remove('ct1');
+      const updateCall = prisma.contract.update.mock.calls[0][0];
+      expect(updateCall.data.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('findAll should include deletedAt:null in where clause', async () => {
+      await service.findAll({});
+      const findManyCall = prisma.contract.findMany.mock.calls[0][0];
+      expect(findManyCall.where.deletedAt).toBeNull();
+    });
+
+    it('findOne should check deletedAt:null', async () => {
+      prisma.contract.findFirst.mockResolvedValue(null);
+      await expect(service.findOne('ct1')).rejects.toThrow(NotFoundException);
+      const findCall = prisma.contract.findFirst.mock.calls[0][0];
+      expect(findCall.where.deletedAt).toBeNull();
     });
   });
 });

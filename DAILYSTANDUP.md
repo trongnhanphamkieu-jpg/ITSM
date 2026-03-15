@@ -7,6 +7,210 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
+## 2026-03-15 22:30 — Agent: Session 36 (Security Audit + Schema Alignment — 7 Phases Complete ✅)
+
+### 📋 Tổng quan
+Thực hiện audit toàn diện dự án ITMS (security, code quality, database, kiến trúc) qua 4 sub-sessions (Sessions 2-5). Hoàn tất 7 phases với 222 unit tests.
+
+### ✅ Phase 1 — Security Hardening
+- RBAC `@Roles()` trên 22 controllers (trước đó chỉ 2/24)
+- JWT access/refresh token tách secret riêng (`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`)
+- Account lockout fix: auto-unlock khi `lockedUntil` hết hạn
+- CSP hardening: xóa `unsafe-inline`, Swagger chỉ dev mode
+- File upload: magic byte validation, path traversal prevention, size limit
+
+### ✅ Phase 2 — Bug Fixes
+- `FileUpload` Prisma model + DB record khi upload
+- `ActualCost.findAll` thêm `deletedAt: null` filter
+- Dashboard `$queryRawUnsafe` → `$queryRaw` (SQL injection fix)
+- Budget upsert thay vì delete-recreate (bảo toàn FK)
+
+### ✅ Phase DB-1 — Database Integrity
+- Tất cả money fields → `Decimal(18,2)` thống nhất
+- 13 FK indexes trên inventory vendor/contract columns
+- `Vendor.taxCode` → `@unique`
+- `ActualCost.budgetItemId` → `onDelete: SetNull`
+- Contract: thêm `contractType`, `signDate`, `autoRenew`, `alertDays`
+
+### ✅ Phase 3 — Code Quality
+- `SanitizePipe` cho XSS prevention
+- Environment variable validation at startup
+- Remove `as any` casts trong cost service
+- Fix Decimal arithmetic trong budget calculations
+
+### ✅ Phase 4 — Architecture
+- `LoggingMiddleware` cho structured request logging
+- E2E test suite cho auth flows
+- Code cleanup + FileUpload unit tests
+
+### ✅ Phase DB-2 — SRS Alignment
+| Thay đổi | Chi tiết |
+|----------|---------|
+| 2 models mới | `ContractPayment`, `CostAttachment` |
+| ActualCost | +`contractId`, `poNumber`, `paymentStatus`, `paidAt` |
+| Vendor | +`website`, `category`, name index |
+| EmailAccount | +`displayName`, `department`, `plan`, `costPerYear`, `expireDate` |
+| VpsServer | +`environment`, `region`, `costPerMonth` |
+| Vehicle | +`contractId` FK + Contract relation |
+| Cost DTOs + Service | Cập nhật cho các trường mới |
+
+### ✅ Phase DB-3 — Advanced Schema
+| Thay đổi | Chi tiết |
+|----------|---------|
+| 4 models mới | `BudgetPlanHistory`, `LicenseAssignment`, `AssetAssignment`, `AssetMaintenanceLog` |
+| BudgetPlan | +`version`, +`deletedAt` (soft delete) |
+| Decimal thống nhất | SoftwareLicense + HardwareAsset → Decimal(18,2) |
+
+### ✅ Session 5 — Quality Polish
+- Contract: hard delete → soft delete (`deletedAt`)
+- Contract/Budget: thêm `deletedAt: null` filter vào tất cả queries
+- Type safety: `any` → `Record<string, unknown>` trong where clauses
+- 4 auth edge case tests (failed attempts, auto-unlock, reset, reject locked)
+- 3 contract soft-delete tests
+
+### 📊 Test Results: **222 tests / 30 suites — ALL PASSING ✅**
+
+### 📂 Files đã sửa (chính)
+| File | Mô tả |
+|------|--------|
+| `backend/prisma/schema.prisma` | +6 models mới, ~15 fields mới, Decimal unification, PaymentStatus enum |
+| `backend/src/cost/cost.service.ts` | Explicit data, new fields, contractRef include |
+| `backend/src/cost/dto/cost.dto.ts` | +contractId, poNumber, paymentStatus, paidAt |
+| `backend/src/contract/contract.service.ts` | Soft delete + deletedAt filter |
+| `backend/src/budget/budget.service.ts` | deletedAt filter + type fix |
+| `backend/src/auth/auth.service.ts` | JWT separation, lockout fix |
+| `backend/src/auth/auth.service.spec.ts` | +4 edge case tests |
+| `backend/src/contract/contract.service.spec.ts` | findFirst mock + 3 soft-delete tests |
+| `backend/src/cost/cost.service.spec.ts` | +4 DB-2 field tests |
+
+### ⚠️ Cần thực hiện sau
+1. `npx prisma migrate dev` — Áp dụng schema lên database
+2. Set `JWT_REFRESH_SECRET` trong production `.env`
+3. Restart TS server trong IDE
+
+---
+
+## 2026-03-15 18:20 — Agent: Session 35 (Debug: Cost Create + Vendor Display + File Upload ✅)
+
+### 🐛 Vấn đề ban đầu
+1. Tạo chi phí thực tế mới → **500 Internal Server Error** (đặc biệt khi chọn nhà cung cấp)
+2. Upload file đính kèm → **413 Payload Too Large** (không có endpoint `/files/upload`)
+3. Nhà cung cấp đã lưu nhưng **không hiển thị** tại màn hình chi phí thực tế
+
+### ✅ Đã hoàn thành
+
+**1. Fix: Create Cost 500 Error (Prisma unchecked mode conflict)**
+- **Root cause**: Prisma `ActualCost.create()` sử dụng unchecked mode (do `createdById` là scalar FK). Spread `...dto` truyền `undefined` cho optional fields → Prisma validation error
+- **Fix**: Explicit field-by-field data construction thay vì spread:
+  ```typescript
+  const data: Record<string, unknown> = {
+    categoryName, description, amount, costDate, createdById,
+  };
+  if (dto.vendorId) data.vendorId = dto.vendorId;
+  // ... other optional fields
+  ```
+- Kết quả: 201 Created ✅, vendorId lưu đúng
+
+**2. Fix: Vendor Name Not Displaying (data model conflict)**
+- **Root cause**: Có 2 trường vendor trên `ActualCost`:
+  - `vendor` (String cũ) — nhập tay, frontend đang dùng để hiển thị
+  - `vendorId` (UUID FK mới) — set bởi VendorSelect dropdown
+  - Frontend chỉ đọc `cost.vendor` → khi dùng dropdown chỉ set `vendorId` → hiển thị "—"
+- **Fix Frontend**: `cost.vendorRef?.name || cost.vendor || "—"` (ưu tiên relation, fallback string cũ)
+- **Fix Backend**: Thêm `vendorRef: { select: { id, name, code } }` vào tất cả query includes (findAll, findOne, create, update)
+- Kết quả: Vendor name hiển thị đúng ✅ (cả dữ liệu mới lẫn dữ liệu cũ)
+
+**3. Fix: File Upload 413 Payload Too Large**
+- **Root cause**: Không có endpoint `/files/upload`, body limit mặc định 100KB
+- **Fix**: Tạo `FileModule` + `FileController` (Multer disk storage, 10MB limit, file type validation)
+- Tăng body limit lên 10MB trong `main.ts`
+- Kết quả: Endpoint `POST /api/v1/files/upload` hoạt động ✅
+
+**4. Fix: Update Method (same Prisma issue)**
+- Viết lại `update()` với explicit field construction (cùng pattern với create)
+- Thêm `vendorRef` include trong response
+
+### 📂 Files đã sửa
+| File | Mô tả |
+|------|--------|
+| `backend/src/cost/cost.service.ts` | Rewrite create + update (explicit data), vendorRef includes |
+| `backend/src/cost/dto/cost.dto.ts` | Add `vendorId`, `attachmentIds` to DTOs |
+| `backend/src/file/file.controller.ts` | **NEW** — File upload endpoint (Multer) |
+| `backend/src/file/file.module.ts` | **NEW** — File module |
+| `backend/src/app.module.ts` | Register FileModule |
+| `backend/src/main.ts` | Body limit 10MB |
+| `frontend/src/app/(dashboard)/costs/page.tsx` | Display `vendorRef?.name \|\| vendor`, add `vendorRef` to interface |
+| `frontend/src/app/(dashboard)/costs/create/page.tsx` | Error alert thay vì silent catch |
+
+### 📊 E2E Verified
+| Test | Result |
+|------|--------|
+| Create cost without vendor | ✅ 201 Success |
+| Create cost with vendor | ✅ 201 Success, vendorId saved |
+| Vendor name in list (new data) | ✅ "Cyber", "Dell Vietnam" hiển thị |
+| Vendor name in list (old data) | ✅ Fallback "—" đúng |
+| Edit cost + change vendor | ✅ Save + display OK |
+| File upload endpoint | ✅ POST /api/v1/files/upload registered |
+
+### 🔧 Bàn giao
+- Backend đang chạy port 4000, frontend port 3000
+- Trường `vendor` (string cũ) GIỮA LẠI cho backward compatibility — không DROP như migration plan SRS (sẽ cập nhật SRS)
+- File upload lưu local (`./uploads/`), chưa kết nối MinIO
+
+---
+
+## 2026-03-15 16:41 — Agent: Session 34 (Export Feature Rebuild ✅)
+
+### ✅ Đã hoàn thành
+
+**Phase 1 — Xóa toàn bộ export cũ (broken):**
+- Xóa `export-button.tsx` shared component + barrel export
+- Xóa backend `export/` module (controller + module)
+- Xóa `ExportModule` khỏi `app.module.ts`
+- Xóa export endpoints khỏi `budget.controller.ts` và `cost.controller.ts`
+- Dọn unused imports (`Res`, `Header`, `XLSX`, `Response`)
+- Xóa `ExportButton` + `EXPORT_COLUMNS` constants khỏi 8 pages
+- Xóa i18n translations (`common.export`, `activity.export`) — vi + en
+
+**Phase 2 — Rebuild client-side Excel export:**
+- Tạo `ExportButton` mới dùng `xlsx` (SheetJS) — 100% client-side, không cần backend API
+- Tính năng: auto-column-width, loading spinner, date-stamped filenames, disabled khi không có data
+- Tích hợp lại vào 8 pages: Vendors, Activity Log, Budget Plans, Forecasts, Vehicles, Costs, Settings/Users, Inventory (Soft + Hard)
+
+**Push to GitHub:**
+- Branch: `feature/rebuild-export-client-side`
+- Repo: `trongnhanphamkieu-jpg/ITSM`
+- Commit: `feat: rebuild export feature with client-side xlsx` (88 files, +7305/-669)
+
+### 📂 Files đã sửa
+| File | Mô tả |
+|------|--------|
+| `frontend/src/components/shared/export-button.tsx` | **RECREATED** — client-side xlsx export |
+| `frontend/src/components/shared/index.ts` | Remove + re-add barrel export |
+| `frontend/src/lib/i18n.tsx` | Xóa `common.export` + `activity.export` (vi+en) |
+| `frontend/src/app/(dashboard)/vendors/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/activity-log/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/budget/plans/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/forecasts/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/vehicles/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/costs/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/settings/users/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/inventory/soft/page.tsx` | Remove + re-add ExportButton |
+| `frontend/src/app/(dashboard)/inventory/hard/page.tsx` | Remove + re-add ExportButton |
+| `backend/src/export/` | **DELETED** — entire directory |
+| `backend/src/app.module.ts` | Remove ExportModule |
+| `backend/src/budget/budget.controller.ts` | Remove export endpoint + unused imports |
+| `backend/src/cost/cost.controller.ts` | Remove export endpoint + unused imports |
+
+### 📊 Build: ✅ Frontend 24 routes, 0 errors | ✅ Backend clean
+
+### 🔧 Bàn giao
+- Export đã hoạt động hoàn toàn client-side, không phụ thuộc backend
+- File tải về đúng tên + .xlsx extension
+- Branch `feature/rebuild-export-client-side` đã push, sẵn sàng merge
+
+---
+
 ## 2026-03-15 15:41 — Agent: Session 33 (Export Excel Debug — ❌ CHƯA FIX ĐƯỢC)
 
 ### 🐛 Vấn đề

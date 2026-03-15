@@ -66,25 +66,23 @@ export class DashboardService {
       }),
 
       // Budget by category (from approved plans for target year)
-      this.prisma.$queryRawUnsafe<{ name: string; total: string }[]>(
-        `SELECT bc.name, SUM(bi.total_price)::text as total
+      this.prisma.$queryRaw<{ name: string; total: string }[]>`
+        SELECT bc.name, SUM(bi.total_price)::text as total
          FROM budget_categories bc
          JOIN budget_items bi ON bi.category_id = bc.id
          JOIN budget_plans bp ON bp.id = bc.plan_id
-         WHERE bp.year = $1 AND bp.status = 'approved'
-         GROUP BY bc.name ORDER BY total DESC LIMIT 8`,
-        targetYear,
-      ),
+         WHERE bp.year = ${targetYear} AND bp.status = 'approved'
+         GROUP BY bc.name ORDER BY total DESC LIMIT 8
+      `,
 
       // Cost by category (in date range)
-      this.prisma.$queryRawUnsafe<{ name: string; total: string }[]>(
-        `SELECT category_name as name, SUM(amount)::text as total
+      this.prisma.$queryRaw<{ name: string; total: string }[]>`
+        SELECT category_name as name, SUM(amount)::text as total
          FROM actual_costs
-         WHERE cost_date >= $1 AND cost_date <= $2
-         GROUP BY category_name ORDER BY total DESC LIMIT 8`,
-        startDate,
-        endDate,
-      ),
+         WHERE cost_date >= ${startDate} AND cost_date <= ${endDate}
+         AND deleted_at IS NULL
+         GROUP BY category_name ORDER BY total DESC LIMIT 8
+      `,
     ]);
 
     const totalBudget = Number(budgetAgg._sum.totalAmount || 0);

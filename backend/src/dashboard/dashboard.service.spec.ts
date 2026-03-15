@@ -23,7 +23,7 @@ describe('DashboardService', () => {
           { id: 'a1', action: 'create', entityType: 'budget_plans', module: 'budget', user: { fullName: 'Admin' }, createdAt: new Date() },
         ]),
       },
-      $queryRawUnsafe: jest.fn().mockResolvedValue([{ name: 'Hardware', total: '500000000' }]),
+      $queryRaw: jest.fn().mockResolvedValue([{ name: 'Hardware', total: '500000000' }]),
     };
 
     const module: TestingModule = await Test.createTestingModule({

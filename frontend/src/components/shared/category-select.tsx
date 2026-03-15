@@ -30,21 +30,11 @@ export function CategorySelect({
 
   const fetchCategories = useCallback(async () => {
     try {
-      // Try dedicated categories endpoint first, fallback to budget categories
-      const res = await api.get<any>("/categories", { limit: 100 });
-      setCategories(res.data || []);
+      const res = await api.get<{ success: boolean; data: string[] }>("/actual-costs/categories");
+      const items = (res.data || []).map((name: string) => ({ id: name, name }));
+      setCategories(items);
     } catch {
-      // Fallback: extract unique category names from budget categories
-      try {
-        const res = await api.get<any>("/budget/categories", { limit: 100 });
-        const unique = (res.data || []).map((c: any) => ({
-          id: c.name,
-          name: c.name,
-        }));
-        setCategories(unique);
-      } catch {
-        setCategories([]);
-      }
+      setCategories([]);
     } finally {
       setLoading(false);
     }

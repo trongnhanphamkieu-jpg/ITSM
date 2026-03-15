@@ -32,7 +32,7 @@ describe('CostService', () => {
         delete: jest.fn(),
         aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 145000000 } }),
       },
-      $queryRawUnsafe: jest.fn().mockResolvedValue([{ month: 3, total: '145000000' }]),
+      $queryRaw: jest.fn().mockResolvedValue([{ month: 3, total: '145000000' }]),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -126,6 +126,57 @@ describe('CostService', () => {
       const result = await service.getSummary();
       expect(result.success).toBe(true);
       expect(result.data.totalSpent).toBe(145000000);
+    });
+  });
+
+  describe('create with DB-2 fields', () => {
+    it('should create cost with contractId and payment tracking', async () => {
+      const dto = {
+        categoryName: 'Software',
+        description: 'License renewal',
+        amount: 50000,
+        costDate: '2026-03-15',
+        contractId: 'contract-uuid',
+        poNumber: 'PO-2026-001',
+        paymentStatus: 'pending',
+        paidAt: null,
+      };
+      await service.create(dto as any, 'u1');
+      const createCall = prisma.actualCost.create.mock.calls[0][0];
+      expect(createCall.data.contractId).toBe('contract-uuid');
+      expect(createCall.data.poNumber).toBe('PO-2026-001');
+      expect(createCall.data.paymentStatus).toBe('pending');
+    });
+  });
+
+  describe('update with payment status', () => {
+    it('should update payment status and paidAt', async () => {
+      prisma.actualCost.findUnique.mockResolvedValue(mockCost);
+      await service.update('c1', {
+        paymentStatus: 'paid',
+        paidAt: '2026-03-20',
+      } as any);
+      const updateCall = prisma.actualCost.update.mock.calls[0][0];
+      expect(updateCall.data.paymentStatus).toBe('paid');
+      expect(updateCall.data.paidAt).toEqual(new Date('2026-03-20'));
+    });
+
+    it('should clear paidAt when set to null', async () => {
+      prisma.actualCost.findUnique.mockResolvedValue(mockCost);
+      await service.update('c1', { paidAt: undefined } as any);
+      // paidAt undefined means no update
+      const updateCall = prisma.actualCost.update.mock.calls[0][0];
+      expect(updateCall.data.paidAt).toBeUndefined();
+    });
+  });
+
+  describe('soft delete', () => {
+    it('should set deletedAt on remove', async () => {
+      prisma.actualCost.findUnique.mockResolvedValue(mockCost);
+      prisma.actualCost.update.mockResolvedValue({ ...mockCost, deletedAt: new Date() });
+      await service.remove('c1');
+      const updateCall = prisma.actualCost.update.mock.calls[0][0];
+      expect(updateCall.data.deletedAt).toBeInstanceOf(Date);
     });
   });
 });

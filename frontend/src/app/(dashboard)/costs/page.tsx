@@ -16,7 +16,10 @@ const COST_EXPORT_COLUMNS: ExportColumn[] = [
   { header: "Danh mục", key: "categoryName" },
   { header: "Mô tả", key: "description" },
   { header: "Số tiền", key: "amount" },
-  { header: "Nhà cung cấp", key: "vendor" },
+  { header: "Nhà cung cấp", key: "vendor", format: (_v: string, row: Record<string, unknown>) => {
+    const ref = row.vendorRef as { name?: string } | null;
+    return ref?.name || (row.vendor as string) || "";
+  } },
   { header: "Số HĐ", key: "invoiceNo" },
 ];
 
@@ -28,6 +31,8 @@ interface ActualCost {
   amount: string;
   costDate: string;
   vendor: string | null;
+  vendorId: string | null;
+  vendorRef: { id: string; name: string; code: string } | null;
   invoiceNo: string | null;
   createdBy: { id: string; fullName: string };
   budgetItem: { id: string; name: string; category: { name: string } } | null;
@@ -305,15 +310,13 @@ export default function CostListPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {editingId === cost.id ? (
-                        <input
-                          type="text"
+                        <VendorSelect
                           value={editForm.vendorId}
-                          onChange={(e) => setEditForm(f => ({ ...f, vendorId: e.target.value }))}
+                          onChange={(v) => setEditForm(f => ({ ...f, vendorId: v }))}
                           className="w-full rounded border border-input bg-background px-2 py-1 text-sm outline-none focus:border-primary"
-                          placeholder="Nhà cung cấp"
                         />
                       ) : (
-                        cost.vendor || "—"
+                        cost.vendorRef?.name || cost.vendor || "—"
                       )}
                     </td>
                     <td className="px-6 py-3 text-muted-foreground">
@@ -335,10 +338,25 @@ export default function CostListPage() {
                           <button onClick={async () => {
                             setEditSaving(true);
                             try {
-                              await api.patch(`/actual-costs/${cost.id}`, editForm);
+                              const payload: Record<string, unknown> = {
+                                categoryName: editForm.categoryName,
+                                description: editForm.description,
+                                amount: editForm.amount,
+                                costDate: editForm.costDate,
+                                invoiceNo: editForm.invoiceNo || undefined,
+                                note: editForm.note || undefined,
+                                vendorId: editForm.vendorId || undefined,
+                              };
+                              // Remove undefined values to avoid sending empty optional fields
+                              Object.keys(payload).forEach(key => {
+                                if (payload[key] === undefined) delete payload[key];
+                              });
+                              await api.patch(`/actual-costs/${cost.id}`, payload);
                               setEditingId(null);
                               fetchCosts();
-                            } catch {} finally { setEditSaving(false); }
+                            } catch (err) {
+                              alert(err instanceof Error ? err.message : "Lỗi khi lưu chi phí");
+                            } finally { setEditSaving(false); }
                           }} disabled={editSaving} className="rounded p-1 text-emerald-600 hover:bg-emerald-50"><i className="bi bi-check-lg" /></button>
                           <button onClick={() => setEditingId(null)} className="rounded p-1 text-gray-400 hover:bg-gray-50"><i className="bi bi-x-lg" /></button>
                         </div>
@@ -349,7 +367,7 @@ export default function CostListPage() {
                             setEditForm({
                               categoryName: cost.categoryName, description: cost.description,
                               amount: Number(cost.amount), costDate: cost.costDate?.split("T")[0] || "",
-                              vendorId: "", invoiceNo: cost.invoiceNo || "", note: "",
+                              vendorId: cost.vendorId || "", invoiceNo: cost.invoiceNo || "", note: "",
                             });
                           }} className="rounded p-1 text-gray-400 hover:text-primary hover:bg-primary/5" title="Chỉnh sửa">
                             <i className="bi bi-pencil" />
@@ -394,10 +412,10 @@ export default function CostListPage() {
                     <i className="bi bi-calendar3 mr-1" />
                     {new Date(cost.costDate).toLocaleDateString("vi-VN")}
                   </span>
-                  {cost.vendor && (
+                  {(cost.vendorRef?.name || cost.vendor) && (
                     <span>
                       <i className="bi bi-building mr-1" />
-                      {cost.vendor}
+                      {cost.vendorRef?.name || cost.vendor}
                     </span>
                   )}
                 </div>

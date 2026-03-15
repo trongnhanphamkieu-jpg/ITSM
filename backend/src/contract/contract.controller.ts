@@ -14,15 +14,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ContractService } from './contract.service';
 import { CreateContractDto, UpdateContractDto } from './dto/contract.dto';
 
 @Controller('contracts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ContractController {
   constructor(private readonly contractService: ContractService) {}
 
   @Get()
+  @Roles('admin', 'manager', 'staff', 'finance', 'viewer')
   findAll(
     @Query('search') search?: string,
     @Query('vendorId') vendorId?: string,
@@ -40,33 +42,37 @@ export class ContractController {
   }
 
   @Get(':id')
+  @Roles('admin', 'manager', 'staff', 'finance', 'viewer')
   findOne(@Param('id') id: string) {
     return this.contractService.findOne(id);
   }
 
   @Post()
+  @Roles('admin', 'manager', 'staff')
   create(@Body() dto: CreateContractDto, @Request() req: any) {
     return this.contractService.create(dto, req.user.id);
   }
 
   @Patch(':id')
+  @Roles('admin', 'manager', 'staff')
   update(@Param('id') id: string, @Body() dto: UpdateContractDto) {
     return this.contractService.update(id, dto);
   }
 
   @Delete(':id')
+  @Roles('admin', 'manager')
   remove(@Param('id') id: string) {
     return this.contractService.remove(id);
   }
 
   @Post(':id/attachments')
+  @Roles('admin', 'manager', 'staff')
   @UseInterceptors(FileInterceptor('file'))
   async uploadAttachment(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Request() req: any,
   ) {
-    // Store file metadata — in production, upload to MinIO first
     const storageKey = `contracts/${id}/${Date.now()}_${file.originalname}`;
     return this.contractService.addAttachment(
       id,
@@ -81,6 +87,7 @@ export class ContractController {
   }
 
   @Delete(':id/attachments/:attachmentId')
+  @Roles('admin', 'manager')
   removeAttachment(
     @Param('id') id: string,
     @Param('attachmentId') attachmentId: string,

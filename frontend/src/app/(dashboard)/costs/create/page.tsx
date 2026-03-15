@@ -92,8 +92,8 @@ export default function CostCreatePage() {
         attachmentIds: attachments.map((f) => f.id),
       });
       router.push("/costs");
-    } catch {
-      // handled by api.ts
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Lỗi khi tạo chi phí");
     } finally {
       setIsSubmitting(false);
     }

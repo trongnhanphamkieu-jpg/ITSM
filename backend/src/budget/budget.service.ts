@@ -31,7 +31,7 @@ export class BudgetService {
     status?: BudgetStatus,
   ) {
     const skip = (page - 1) * limit;
-    const where: any = {};
+    const where: Record<string, unknown> = { deletedAt: null };
 
     if (search) {
       where.OR = [
@@ -96,7 +96,7 @@ export class BudgetService {
                 unit: item.unit,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                totalPrice: item.quantity * item.unitPrice,
+                totalPrice: Number(item.quantity) * Number(item.unitPrice),
                 note: item.note,
                 sortOrder: item.sortOrder ?? ii,
               })),
@@ -137,34 +137,75 @@ export class BudgetService {
       },
     });
 
-    // Replace categories+items if provided
+    // Upsert categories+items (preserves IDs)
     if (dto.categories) {
-      await this.prisma.budgetCategory.deleteMany({
-        where: { planId: id },
-      });
+      await this.prisma.$transaction(async (tx) => {
+        const existingCats = await tx.budgetCategory.findMany({
+          where: { planId: id },
+          include: { items: true },
+        });
+        const existingCatMap = new Map(existingCats.map(c => [c.name, c]));
+        const incomingNames = new Set(dto.categories!.map(c => c.name));
 
-      for (let ci = 0; ci < dto.categories.length; ci++) {
-        const cat = dto.categories[ci];
-        await this.prisma.budgetCategory.create({
-          data: {
-            planId: id,
-            name: cat.name,
-            sortOrder: cat.sortOrder ?? ci,
-            items: {
-              create: cat.items.map((item, ii) => ({
+        // Delete categories not in incoming data
+        const toDelete = existingCats.filter(c => !incomingNames.has(c.name));
+        if (toDelete.length) {
+          await tx.budgetCategory.deleteMany({
+            where: { id: { in: toDelete.map(c => c.id) } },
+          });
+        }
+
+        // Upsert incoming categories
+        for (let ci = 0; ci < dto.categories!.length; ci++) {
+          const cat = dto.categories![ci];
+          const existing = existingCatMap.get(cat.name);
+
+          if (existing) {
+            // Update existing category
+            await tx.budgetCategory.update({
+              where: { id: existing.id },
+              data: { sortOrder: cat.sortOrder ?? ci },
+            });
+
+            // Replace items within existing category
+            await tx.budgetItem.deleteMany({ where: { categoryId: existing.id } });
+            await tx.budgetItem.createMany({
+              data: cat.items.map((item, ii) => ({
+                categoryId: existing.id,
                 name: item.name,
                 description: item.description,
                 unit: item.unit,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                totalPrice: item.quantity * item.unitPrice,
+                totalPrice: Number(item.quantity) * Number(item.unitPrice),
                 note: item.note,
                 sortOrder: item.sortOrder ?? ii,
               })),
-            },
-          },
-        });
-      }
+            });
+          } else {
+            // Create new category with items
+            await tx.budgetCategory.create({
+              data: {
+                planId: id,
+                name: cat.name,
+                sortOrder: cat.sortOrder ?? ci,
+                items: {
+                  create: cat.items.map((item, ii) => ({
+                    name: item.name,
+                    description: item.description,
+                    unit: item.unit,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    totalPrice: Number(item.quantity) * Number(item.unitPrice),
+                    note: item.note,
+                    sortOrder: item.sortOrder ?? ii,
+                  })),
+                },
+              },
+            });
+          }
+        }
+      });
 
       await this.recalcTotal(id);
     }

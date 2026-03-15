@@ -3,6 +3,7 @@ const API_BASE_URL =
 
 type RequestOptions = RequestInit & {
   params?: Record<string, string | number | boolean | undefined>;
+  skipContentType?: boolean;
 };
 
 function buildUrl(
@@ -26,26 +27,90 @@ function getAuthHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefreshToken(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) return refreshPromise;
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) return false;
+
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      if (data.data?.accessToken) {
+        localStorage.setItem("access_token", data.data.accessToken);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 async function request<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { params, ...fetchOptions } = options;
+  const { params, skipContentType, ...fetchOptions } = options;
   const url = buildUrl(path, params);
+
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+    ...(fetchOptions.headers as Record<string, string>),
+  };
+
+  if (!skipContentType) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const response = await fetch(url, {
     ...fetchOptions,
-    headers: {
-      "Content-Type": "application/json",
-      ...getAuthHeaders(),
-      ...fetchOptions.headers,
-    },
+    headers,
   });
 
   if (response.status === 401) {
-    // TODO: Implement refresh token logic
+    // Try refresh token before logging out
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      // Retry original request with new token
+      const retryHeaders: Record<string, string> = {
+        ...getAuthHeaders(),
+        ...(fetchOptions.headers as Record<string, string>),
+      };
+      if (!skipContentType) {
+        retryHeaders["Content-Type"] = "application/json";
+      }
+      const retryResponse = await fetch(url, {
+        ...fetchOptions,
+        headers: retryHeaders,
+      });
+
+      if (retryResponse.ok) {
+        return retryResponse.json();
+      }
+    }
+
+    // Refresh failed — force logout
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       window.location.href = "/login";
     }
   }
@@ -54,7 +119,7 @@ async function request<T>(
 
   if (!response.ok) {
     throw new ApiError(
-      data.error?.message || "An error occurred",
+      data.error?.message || data.message || "An error occurred",
       response.status,
       data.error
     );
@@ -93,6 +158,6 @@ export const api = {
     request<T>(path, {
       method: "POST",
       body: formData,
-      headers: { ...getAuthHeaders() },
+      skipContentType: true,
     }),
 };

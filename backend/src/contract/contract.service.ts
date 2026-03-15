@@ -14,7 +14,7 @@ export class ContractService {
     limit?: number;
   }) {
     const { search, vendorId, status, page = 1, limit = 20 } = query;
-    const where: any = {};
+    const where: Record<string, unknown> = { deletedAt: null };
 
     if (search) {
       where.OR = [
@@ -48,8 +48,8 @@ export class ContractService {
   }
 
   async findOne(id: string) {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id },
+    const contract = await this.prisma.contract.findFirst({
+      where: { id, deletedAt: null },
       include: {
         vendor: { select: { id: true, name: true, code: true, email: true, phone: true } },
         attachments: {
@@ -96,7 +96,10 @@ export class ContractService {
 
   async remove(id: string) {
     await this.findOne(id);
-    await this.prisma.contract.delete({ where: { id } });
+    await this.prisma.contract.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
     return { success: true, message: 'Contract deleted' };
   }
 
@@ -129,6 +132,7 @@ export class ContractService {
     return this.prisma.contract.findMany({
       where: {
         status: 'active',
+        deletedAt: null,
         endDate: { gte: now, lte: target },
       },
       include: {

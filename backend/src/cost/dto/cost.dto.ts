@@ -6,6 +6,8 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  IsArray,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -43,14 +45,46 @@ export class CreateActualCostDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  vendorId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   invoiceNo?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  contractId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  poNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(['pending', 'paid', 'cancelled'])
+  paymentStatus?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  paidAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  attachmentIds?: string[];
 }
 
 export class UpdateActualCostDto {
@@ -90,9 +124,35 @@ export class UpdateActualCostDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  vendorId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   invoiceNo?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  contractId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  poNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(['pending', 'paid', 'cancelled'])
+  paymentStatus?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  paidAt?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

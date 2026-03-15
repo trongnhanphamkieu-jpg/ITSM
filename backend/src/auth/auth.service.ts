@@ -30,7 +30,14 @@ export class AuthService {
     }
 
     if (user.status === 'locked') {
-      throw new ForbiddenException('Tài khoản đã bị khóa');
+      if (user.lockedUntil && user.lockedUntil > new Date()) {
+        throw new ForbiddenException('Tài khoản đã bị khóa. Vui lòng thử lại sau.');
+      }
+      // Lock expired — auto-unlock
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'active', failedAttempts: 0, lockedUntil: null },
+      });
     }
 
     if (user.status === 'inactive') {
@@ -88,7 +95,7 @@ export class AuthService {
   async refreshToken(refreshToken: string) {
     try {
       const payload = await this.jwt.verifyAsync(refreshToken, {
-        secret: this.config.get('JWT_SECRET'),
+        secret: this.config.get('JWT_REFRESH_SECRET', this.config.get('JWT_SECRET')),
       });
 
       const user = await this.prisma.user.findUnique({
@@ -147,6 +154,7 @@ export class AuthService {
 
   private async generateRefreshToken(payload: JwtPayload) {
     return this.jwt.signAsync(payload, {
+      secret: this.config.get('JWT_REFRESH_SECRET', this.config.get('JWT_SECRET')),
       expiresIn: this.config.get('JWT_REFRESH_TTL', '7d'),
     });
   }

@@ -1391,11 +1391,14 @@ volumes:
 ### 7b.1 Schema Migration — Fix broken FKs
 
 ```sql
--- Migration: actual_costs.vendor VARCHAR → vendor_id FK
+-- Migration: actual_costs thêm vendor_id FK (GIỮ LẠI vendor string cho backward compatibility)
 ALTER TABLE actual_costs ADD COLUMN vendor_id UUID REFERENCES vendors(id);
 -- Data migration: match existing vendor text to vendor IDs
 UPDATE actual_costs ac SET vendor_id = v.id FROM vendors v WHERE LOWER(ac.vendor) = LOWER(v.name);
-ALTER TABLE actual_costs DROP COLUMN vendor;
+-- LƯU Ý: KHÔNG DROP COLUMN vendor — giữ lại cho backward compatibility
+-- Frontend hiển thị: vendorRef?.name || vendor || "—" (ưu tiên relation, fallback string cũ)
+-- Index cho vendor_id
+CREATE INDEX idx_actual_costs_vendor_id ON actual_costs(vendor_id);
 
 -- Migration: actual_costs.category_name VARCHAR → category_id FK (requires categories table)
 CREATE TABLE categories (
