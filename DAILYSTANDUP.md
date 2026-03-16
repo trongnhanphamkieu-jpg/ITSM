@@ -9,6 +9,35 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
+## 2026-03-16 09:53 — Agent: Session 49 (Data Consistency Fix — Budget Totals ✅)
+
+### Vấn đề
+Dữ liệu **không đồng nhất** giữa các màn hình:
+- Dashboard & Budget List → **12.750.000.000 đ** (stale DB value)
+- Budget Detail & Reports → **13.800.000.000 đ** (tính đúng từ items)
+
+### Root Cause
+`budget_plans.totalAmount` bị stale vì seed data bypass `recalcTotal()`. Dashboard dùng `_sum.totalAmount` aggregate đọc giá trị cũ.
+
+### Hoàn thành
+1. **Dashboard backend** — Thay `_sum.totalAmount` aggregate bằng raw SQL tính trực tiếp từ `budget_items → budget_categories → budget_plans` join
+2. **DB recalculation** — Chạy SQL UPDATE cho 4 budget plans (NS2026-001: 12.75B → **13.8B**)
+3. **Unit tests** — Cập nhật mock `$queryRaw` cho dashboard spec
+
+### Kiểm chứng
+- ✅ Dashboard tests: 7/7 passed
+- ✅ Frontend build: 0 errors
+- ✅ Cross-screen verification: Dashboard = Budget List = Budget Detail = Reports = **13.800.000.000 đ**
+- ✅ Git: commit `5e13364` → `feature/rebuild-export-client-side`
+
+### Files changed
+| File | Thay đổi |
+|------|----------|
+| `backend/src/dashboard/dashboard.service.ts` | `_sum.totalAmount` → `$queryRaw` from items |
+| `backend/src/dashboard/dashboard.service.spec.ts` | Updated mocks for `$queryRaw` pattern |
+
+---
+
 ## 2026-03-16 — Agent: Session 48 (V2 Remaining Tasks — Block 1-5)
 
 ### Hoàn thành
