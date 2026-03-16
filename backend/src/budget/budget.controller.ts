@@ -19,6 +19,7 @@ import {
 } from './dto/budget.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { RequirePermission } from '../auth/guards/permission.guard';
 import { BudgetStatus } from '@prisma/client';
 
 @ApiTags('Budget Plans')
@@ -61,6 +62,7 @@ export class BudgetController {
 
   @Post()
   @Roles('admin', 'manager', 'finance')
+  @RequirePermission('budget_plan', 'create')
   @ApiOperation({ summary: 'Tạo kế hoạch ngân sách mới' })
   create(
     @Body() dto: CreateBudgetPlanDto,
@@ -71,6 +73,7 @@ export class BudgetController {
 
   @Patch(':id')
   @Roles('admin', 'manager', 'finance')
+  @RequirePermission('budget_plan', 'edit')
   @ApiOperation({ summary: 'Cập nhật kế hoạch ngân sách' })
   update(@Param('id') id: string, @Body() dto: UpdateBudgetPlanDto) {
     return this.budgetService.update(id, dto);
@@ -78,6 +81,7 @@ export class BudgetController {
 
   @Delete(':id')
   @Roles('admin', 'manager')
+  @RequirePermission('budget_plan', 'delete')
   @ApiOperation({ summary: 'Xóa kế hoạch ngân sách (chỉ trạng thái Nháp)' })
   delete(@Param('id') id: string) {
     return this.budgetService.delete(id);
@@ -94,6 +98,7 @@ export class BudgetController {
 
   @Post(':id/approve')
   @Roles('admin', 'manager')
+  @RequirePermission('budget_plan', 'approve')
   @ApiOperation({ summary: 'Phê duyệt kế hoạch ngân sách' })
   approve(
     @Param('id') id: string,

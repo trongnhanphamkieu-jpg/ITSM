@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { CostService } from './cost.service';
 import { CreateActualCostDto, UpdateActualCostDto, UpdatePaymentDto } from './dto/cost.dto';
+import { RequirePermission } from '../auth/guards/permission.guard';
 
 @ApiTags('Actual Costs')
 @ApiBearerAuth()
@@ -65,12 +66,14 @@ export class CostController {
 
   @Post()
   @Roles('admin', 'manager', 'staff')
+  @RequirePermission('actual_cost', 'create')
   create(@Body() dto: CreateActualCostDto, @Req() req: { user: { id: string } }) {
     return this.costService.create(dto, req.user.id);
   }
 
   @Patch(':id')
   @Roles('admin', 'manager', 'staff')
+  @RequirePermission('actual_cost', 'edit')
   update(@Param('id') id: string, @Body() dto: UpdateActualCostDto) {
     return this.costService.update(id, dto);
   }
@@ -83,6 +86,7 @@ export class CostController {
 
   @Delete(':id')
   @Roles('admin', 'manager')
+  @RequirePermission('actual_cost', 'delete')
   remove(@Param('id') id: string) {
     return this.costService.remove(id);
   }

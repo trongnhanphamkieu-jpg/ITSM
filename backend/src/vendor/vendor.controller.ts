@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { VendorService } from './vendor.service';
 import { CreateVendorDto, UpdateVendorDto } from './dto/vendor.dto';
+import { RequirePermission } from '../auth/guards/permission.guard';
 
 @Controller('vendors')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,18 +45,21 @@ export class VendorController {
 
   @Post()
   @Roles('admin', 'manager', 'staff')
+  @RequirePermission('vendor', 'create')
   create(@Body() dto: CreateVendorDto, @Request() req: any) {
     return this.vendorService.create(dto, req.user.id);
   }
 
   @Patch(':id')
   @Roles('admin', 'manager', 'staff')
+  @RequirePermission('vendor', 'edit')
   update(@Param('id') id: string, @Body() dto: UpdateVendorDto) {
     return this.vendorService.update(id, dto);
   }
 
   @Delete(':id')
   @Roles('admin', 'manager')
+  @RequirePermission('vendor', 'delete')
   remove(@Param('id') id: string) {
     return this.vendorService.remove(id);
   }

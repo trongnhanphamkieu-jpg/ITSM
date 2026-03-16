@@ -1,7 +1,7 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -28,6 +28,7 @@ import { MasterDataModule } from './master-data/master-data.module';
 import { RbacModule } from './rbac/rbac.module';
 import { CronModule } from './cron/cron.module';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
+import { PermissionGuard } from './auth/guards/permission.guard';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { LoggingMiddleware } from './common/middleware/logging.middleware';
   providers: [
     AppService,
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    { provide: APP_GUARD, useClass: PermissionGuard },
   ],
 })
 export class AppModule implements NestModule {
