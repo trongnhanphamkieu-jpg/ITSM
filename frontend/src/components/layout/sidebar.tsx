@@ -49,6 +49,8 @@ const NAV_ITEMS: NavGroup[] = [
     groupKey: "nav.group.operations",
     items: [
       { labelKey: "nav.vehicles", href: "/vehicles", icon: "bi-truck", module: "vehicle" },
+      { labelKey: "nav.payables", href: "/vendors/payables", icon: "bi-receipt-cutoff", module: "vendor" },
+      { labelKey: "nav.vendor_report", href: "/vendors/report", icon: "bi-file-earmark-bar-graph", module: "report" },
       { labelKey: "nav.reports", href: "/reports", icon: "bi-bar-chart-line", module: "report" },
       { labelKey: "nav.activity_log", href: "/activity-log", icon: "bi-journal-text", module: "activity_log" },
     ],

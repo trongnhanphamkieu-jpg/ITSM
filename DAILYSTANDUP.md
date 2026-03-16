@@ -8,7 +8,30 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
-## 2026-03-16 02:00 — Agent: Session 46 (Wave B + C ✅)
+## 2026-03-16 08:05 — Agent: Session 47 (Wave D: Polish ✅ — V2.0 COMPLETE)
+
+### Hoàn thành
+- **Cron Job System**:
+  - Installed `@nestjs/schedule`
+  - `CronModule` + `CronTaskService` — daily 8AM
+  - `checkPaymentOverdue()` — detect overdue costs, notify admin/finance/manager
+  - `checkContractExpiry()` — already existed, now scheduled
+  - Added `payment_overdue` notification type
+
+- **Documentation v2.0**:
+  - BRD → v2.0 (changelog + active status)
+  - PRD → v2.0 (changelog + active status)
+  - Technical Architecture → v2.0
+  - PLAN-itsm-v2.md → '✅ Đã triển khai (Wave A-D)'
+
+### Kiểm chứng
+- ✅ Backend + Frontend build: 0 errors
+- ✅ Jest: 232/232 tests pass
+- ✅ GitHub: `43bed81` (cron), `525e3bc` (docs)
+
+### 🎉 V2.0 COMPLETE — All 4 Waves Done
+
+---
 
 ### Hoàn thành
 - **Wave B: RBAC UI**

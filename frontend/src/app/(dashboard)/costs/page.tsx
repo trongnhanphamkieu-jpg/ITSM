@@ -385,6 +385,14 @@ export default function CostListPage() {
                                 />
                               </div>
                             )}
+                            {cost.paymentDueDate && cost.paymentStatus !== 'paid' && cost.paymentStatus !== 'cancelled' && (() => {
+                              const due = new Date(cost.paymentDueDate);
+                              const now = new Date();
+                              const diff = Math.floor((now.getTime() - due.getTime()) / 86400000);
+                              return diff > 0 ? (
+                                <span className="text-[9px] font-semibold text-red-600">⚠ Quá hạn {diff} ngày</span>
+                              ) : null;
+                            })()}
                           </div>
                         );
                       })()}

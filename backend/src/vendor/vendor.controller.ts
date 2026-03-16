@@ -59,4 +59,46 @@ export class VendorController {
   remove(@Param('id') id: string) {
     return this.vendorService.remove(id);
   }
+
+  // ── PAYABLES ───────────────────────────────────────────────
+
+  @Get('payables/summary')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getPayablesSummary() {
+    return this.vendorService.getPayablesSummary();
+  }
+
+  @Get(':id/payables')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getPayables(@Param('id') id: string) {
+    return this.vendorService.getPayables(id);
+  }
+
+  // ── RECONCILIATION ─────────────────────────────────────────
+
+  @Post(':id/reconciliations')
+  @Roles('admin', 'manager', 'finance')
+  createReconciliation(@Param('id') id: string, @Request() req: any) {
+    return this.vendorService.createReconciliation(id, req.user.id);
+  }
+
+  @Get(':id/reconciliations')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getReconciliations(@Param('id') id: string) {
+    return this.vendorService.getReconciliations(id);
+  }
+
+  @Get(':id/reconciliations/:rid')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getReconciliationDetail(@Param('id') id: string, @Param('rid') rid: string) {
+    return this.vendorService.getReconciliationDetail(id, rid);
+  }
+
+  // ── REPORT ─────────────────────────────────────────────────
+
+  @Get('report/costs')
+  @Roles('admin', 'manager', 'finance', 'viewer')
+  getVendorCostReport(@Query('year') year?: string) {
+    return this.vendorService.getVendorCostReport(year ? parseInt(year) : undefined);
+  }
 }
