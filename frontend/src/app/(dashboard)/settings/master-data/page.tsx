@@ -371,11 +371,11 @@ export default function MasterDataPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           onClick={() => setShowModal(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-surface p-6 shadow-2xl border border-border"
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-5">

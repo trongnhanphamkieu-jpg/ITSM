@@ -9,6 +9,23 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
+## 2026-03-16 10:00 — Agent: Session 50 (UI Fix: Master Data Modal Background ✅)
+
+### Vấn đề
+Modal "Thêm mới" / "Chỉnh sửa" trong Master Data có nền mờ (`backdrop-blur-sm` + `bg-surface`) → khó đọc text và input fields.
+
+### Hoàn thành
+- Bỏ `backdrop-blur-sm` khỏi overlay → phía sau modal không còn bị blur
+- Đổi `bg-surface` → `bg-white` → nền modal trắng rõ ràng, dễ đọc
+- Áp dụng cho tất cả tabs (Danh mục ngân sách, Phòng ban, Loại hợp đồng, v.v.)
+
+### Files changed
+| File | Thay đổi |
+|------|----------|
+| `frontend/src/app/(dashboard)/settings/master-data/page.tsx` | Modal overlay: bỏ `backdrop-blur-sm`, modal panel: `bg-surface` → `bg-white` |
+
+---
+
 ## 2026-03-16 09:53 — Agent: Session 49 (Data Consistency Fix — Budget Totals ✅)
 
 ### Vấn đề
