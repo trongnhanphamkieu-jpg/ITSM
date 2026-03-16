@@ -1,9 +1,10 @@
 # ITMS – KIẾN TRÚC KỸ THUẬT & TECH STACK
 ## Hệ thống Quản trị Công nghệ Thông tin Nội bộ
 
-**Phiên bản:** 1.0  
+**Phiên bản:** 2.0  
 **Ngày lập:** 13/03/2026  
-**Tham chiếu:** BRD v1.4 | PRD v1.4 | SRS v1.4 | UI_Guideline.md
+**Cập nhật:** 16/03/2026 – v2.0: Dynamic RBAC, CronModule, MasterData  
+**Tham chiếu:** BRD v2.0 | PRD v2.0 | SRS v1.4 | UI_Guideline.md
 
 ---
 

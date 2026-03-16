@@ -1,12 +1,15 @@
 # BRD – TÀI LIỆU YÊU CẦU NGHIỆP VỤ
 ## Hệ thống Quản trị Công nghệ Thông tin Nội bộ (IT Management System – ITMS)
 
-**Phiên bản:** 1.6  
+**Phiên bản:** 2.0  
 **Ngày lập:** 13/03/2026  
-**Cập nhật:** 15/03/2026 – v1.6: Bổ sung yêu cầu liên kết dữ liệu xuyên module, file upload, quản lý trạng thái HĐ, format số tiền, dashboard nâng cao, export Excel, edit/revert  
-**Lịch sử:** 14/03 v1.5 – Redesign Module 10 Vehicle Cost subscription model  
+**Cập nhật:** 16/03/2026 – v2.0: Dynamic RBAC, Master Data, Cron Job, Payment Overdue  
+**Lịch sử:**  
+- 16/03 v2.0 – Dynamic RBAC, Master Data configuration, Overdue payment cron  
+- 15/03 v1.6 – Liên kết dữ liệu xuyên module, file upload, HĐ trạng thái, dashboard nâng cao, export  
+- 14/03 v1.5 – Redesign Module 10 Vehicle Cost subscription model  
 **Người soạn:** Team IT  
-**Trạng thái:** Bản nháp
+**Trạng thái:** Active
 
 ---
 

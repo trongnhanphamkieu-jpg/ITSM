@@ -2,9 +2,10 @@
 ## Kế hoạch cải tiến hệ thống ITMS phiên bản 2.0
 
 **Ngày lập:** 15/03/2026  
+**Ngày hoàn thành:** 16/03/2026  
 **Tham chiếu:** BRD v1.6 | PRD v1.6 | SRS v1.6 | PLAN-v1-enhancement.md | schema.prisma  
-**Trạng thái:** Chờ duyệt lần 2  
-**Phiên bản:** Draft 2 — Cập nhật theo feedback user
+**Trạng thái:** ✅ Đã triển khai (Wave A-D)  
+**Phiên bản:** v2.0 Final
 
 ---
 
