@@ -26,6 +26,7 @@ import { HealthController } from './health.controller';
 import { FileModule } from './file/file.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { RbacModule } from './rbac/rbac.module';
+import { CronModule } from './cron/cron.module';
 import { LoggingMiddleware } from './common/middleware/logging.middleware';
 
 @Module({
@@ -56,6 +57,7 @@ import { LoggingMiddleware } from './common/middleware/logging.middleware';
     FileModule,
     MasterDataModule,
     RbacModule,
+    CronModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

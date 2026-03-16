@@ -8,7 +8,28 @@
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 ---
 
-## 2026-03-16 01:45 — Agent: Session 45 (Wave A: RBAC Core ✅)
+## 2026-03-16 02:00 — Agent: Session 46 (Wave B + C ✅)
+
+### Hoàn thành
+- **Wave B: RBAC UI**
+  - Role Management page `/settings/roles` (CRUD + Permission Matrix 15×7)
+  - Toggle all per row/column, system role lock, activate/deactivate
+  - User form: API-driven role dropdown (`/rbac/roles`)
+  - 403 Forbidden page (`/forbidden`)
+  - Sidebar link for roles
+
+- **Wave C: Form Migrations**
+  - inventory/hard: `category` → `MasterDataSelect(hardware_category)`
+  - inventory/hard: `location` → `MasterDataSelect(location)` [2 forms]
+  - inventory/hard: `infraType` → `MasterDataSelect(infra_type)`
+  - Added `master-data` field type to generic form renderer
+
+### Kiểm chứng
+- ✅ Backend + Frontend build: 0 errors
+- ✅ Jest: 232/232 tests pass
+- ✅ GitHub: `3791579` (Wave B), `fea9dac` (Wave C)
+
+---
 
 ### Hoàn thành
 - **Backend**:

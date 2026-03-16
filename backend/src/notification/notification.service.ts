@@ -51,7 +51,7 @@ export class NotificationService {
 
   async createNotification(data: {
     userId: string;
-    type: 'contract_expiry' | 'budget_approval' | 'system';
+    type: 'contract_expiry' | 'budget_approval' | 'payment_overdue' | 'system';
     title: string;
     message: string;
     entityType?: string;
@@ -107,5 +107,64 @@ export class NotificationService {
     }
 
     return { checked: contracts.length, notified: admins.length };
+  }
+
+  async checkPaymentOverdue() {
+    const overdueCosts = await this.prisma.actualCost.findMany({
+      where: {
+        paymentDueDate: { lt: new Date() },
+        paymentStatus: { in: ['pending', 'partial_paid'] },
+      },
+      select: {
+        id: true,
+        description: true,
+        amount: true,
+        paymentDueDate: true,
+        paymentStatus: true,
+      },
+    });
+
+    // Notify admin + finance users
+    const recipients = await this.prisma.user.findMany({
+      where: {
+        status: 'active',
+        role: { in: ['admin', 'finance', 'manager'] },
+      },
+      select: { id: true },
+    });
+
+    let notified = 0;
+    for (const cost of overdueCosts) {
+      const daysOverdue = Math.ceil(
+        (Date.now() - (cost.paymentDueDate?.getTime() || 0)) / (24 * 60 * 60 * 1000),
+      );
+
+      for (const user of recipients) {
+        // Avoid duplicate: check if notified in last 24h
+        const exists = await this.prisma.notification.findFirst({
+          where: {
+            userId: user.id,
+            entityType: 'actual_cost',
+            entityId: cost.id,
+            type: 'payment_overdue',
+            createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          },
+        });
+
+        if (!exists) {
+          await this.createNotification({
+            userId: user.id,
+            type: 'payment_overdue',
+            title: `Chi phí quá hạn thanh toán (${daysOverdue} ngày)`,
+            message: `"${cost.description}" — ${Number(cost.amount).toLocaleString('vi-VN')}đ — quá hạn ${daysOverdue} ngày.`,
+            entityType: 'actual_cost',
+            entityId: cost.id,
+          });
+          notified++;
+        }
+      }
+    }
+
+    return { overdue: overdueCosts.length, notified };
   }
 }
