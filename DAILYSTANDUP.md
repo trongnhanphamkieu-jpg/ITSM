@@ -6,6 +6,27 @@
 
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
 <!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
+<!-- Agent ghi từ đây trở xuống, mục mới nhất ở TRÊN CÙNG -->
+---
+
+## 2026-03-16 — Agent: Session 48 (V2 Remaining Tasks — Block 1-5)
+
+### Hoàn thành
+- **Block 1: Form Migrations** — Verified mostly done/N/A (fields don't exist in frontend)
+- **Block 2: Payment UI** — Added overdue badge (⚠ Quá hạn X ngày) to cost list. All other components (badge, progress bar, filter, modal, dueDate form) already implemented.
+- **Block 3: RBAC Enforcement** — PermissionGuard globally registered via APP_GUARD. @RequirePermission applied to BudgetController (create/edit/delete/approve), CostController (create/edit/delete), VendorController (create/edit/delete)
+- **Block 4: Vendor Payables + Report**:
+  - Backend: 6 new endpoints (payables-summary, vendor payables, reconciliation CRUD, vendor-cost report)
+  - Frontend: `/vendors/payables` page (KPI cards + outstanding table) + `/vendors/report` page (monthly breakdown + Excel export)
+  - Sidebar items added
+- **Block 5: Dashboard Widgets** — All 3 widgets already existed (Top NCC, Payment Summary, Overdue)
+
+### Kiểm chứng
+- ✅ Backend tsc: 0 new errors
+- ✅ Frontend build: all pages compiled
+- ✅ Jest: 232/232 tests pass
+- ✅ Commits: `d80719c` (Block 4), `7a2bf7f` (Block 3)
+
 ---
 
 ## 2026-03-16 08:05 — Agent: Session 47 (Wave D: Polish ✅ — V2.0 COMPLETE)
