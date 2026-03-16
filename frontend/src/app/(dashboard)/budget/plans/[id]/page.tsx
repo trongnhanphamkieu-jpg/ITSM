@@ -125,6 +125,11 @@ export default function BudgetDetailPage() {
     (sum, c) => sum + c.items.length,
     0
   );
+  const grandTotal = plan.categories.reduce(
+    (sum, cat) =>
+      sum + cat.items.reduce((s, item) => s + Number(item.totalPrice), 0),
+    0
+  );
 
   return (
     <div>
@@ -228,7 +233,7 @@ export default function BudgetDetailPage() {
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <p className="text-xs text-muted-foreground">Tổng ngân sách</p>
           <p className="mt-1 text-xl font-bold text-primary">
-            {formatCurrency(plan.totalAmount)}
+            {formatCurrency(grandTotal)}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -365,7 +370,7 @@ export default function BudgetDetailPage() {
           TỔNG CỘNG
         </span>
         <span className="text-2xl font-bold text-primary">
-          {formatCurrency(plan.totalAmount)}
+          {formatCurrency(grandTotal)}
         </span>
       </div>
 

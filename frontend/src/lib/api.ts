@@ -86,32 +86,37 @@ async function request<T>(
   });
 
   if (response.status === 401) {
-    // Try refresh token before logging out
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      // Retry original request with new token
-      const retryHeaders: Record<string, string> = {
-        ...getAuthHeaders(),
-        ...(fetchOptions.headers as Record<string, string>),
-      };
-      if (!skipContentType) {
-        retryHeaders["Content-Type"] = "application/json";
-      }
-      const retryResponse = await fetch(url, {
-        ...fetchOptions,
-        headers: retryHeaders,
-      });
+    // Skip token refresh for auth endpoints (login, register)
+    const isAuthEndpoint = path.startsWith("/auth/");
 
-      if (retryResponse.ok) {
-        return retryResponse.json();
-      }
-    }
+    if (!isAuthEndpoint) {
+      // Try refresh token before logging out
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        // Retry original request with new token
+        const retryHeaders: Record<string, string> = {
+          ...getAuthHeaders(),
+          ...(fetchOptions.headers as Record<string, string>),
+        };
+        if (!skipContentType) {
+          retryHeaders["Content-Type"] = "application/json";
+        }
+        const retryResponse = await fetch(url, {
+          ...fetchOptions,
+          headers: retryHeaders,
+        });
 
-    // Refresh failed — force logout
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      window.location.href = "/login";
+        if (retryResponse.ok) {
+          return retryResponse.json();
+        }
+      }
+
+      // Refresh failed — force logout
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/login";
+      }
     }
   }
 
