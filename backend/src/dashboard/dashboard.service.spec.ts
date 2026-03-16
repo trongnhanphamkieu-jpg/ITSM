@@ -10,9 +10,14 @@ describe('DashboardService', () => {
   let prisma: any;
 
   beforeEach(async () => {
+    // $queryRaw is called multiple times: 1st for budget total, 2nd for budgetByCategory, 3rd for costByCategory
+    const queryRawMock = jest.fn()
+      .mockResolvedValueOnce([{ total: '13800000000' }])   // budget total from items
+      .mockResolvedValueOnce([{ name: 'Hardware', total: '500000000' }]) // budgetByCategory
+      .mockResolvedValueOnce([{ name: 'Hardware', total: '200000000' }]); // costByCategory
+
     prisma = {
       budgetPlan: {
-        aggregate: jest.fn().mockResolvedValue({ _sum: { totalAmount: 13000000000 } }),
         count: jest.fn().mockResolvedValue(4),
       },
       actualCost: {
@@ -23,7 +28,7 @@ describe('DashboardService', () => {
           { id: 'a1', action: 'create', entityType: 'budget_plans', module: 'budget', user: { fullName: 'Admin' }, createdAt: new Date() },
         ]),
       },
-      $queryRaw: jest.fn().mockResolvedValue([{ name: 'Hardware', total: '500000000' }]),
+      $queryRaw: queryRawMock,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -41,7 +46,7 @@ describe('DashboardService', () => {
     it('should return dashboard summary with year filter', async () => {
       const result = await service.getSummary(2026);
       expect(result.success).toBe(true);
-      expect(result.data.totalBudget).toBe(13000000000);
+      expect(result.data.totalBudget).toBe(13800000000);
       expect(result.data.totalSpent).toBe(700000000);
       expect(result.data.planCount).toBe(4);
     });
@@ -52,7 +57,11 @@ describe('DashboardService', () => {
     });
 
     it('should return 0 spentPercentage if no budget', async () => {
-      prisma.budgetPlan.aggregate.mockResolvedValue({ _sum: { totalAmount: null } });
+      prisma.$queryRaw.mockReset();
+      prisma.$queryRaw
+        .mockResolvedValueOnce([{ total: '0' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
       const result = await service.getSummary(2026);
       expect(result.data.spentPercentage).toBe(0);
     });

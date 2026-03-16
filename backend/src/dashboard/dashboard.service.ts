@@ -32,7 +32,7 @@ export class DashboardService {
     }
 
     const [
-      budgetAgg,
+      budgetTotalResult,
       costAgg,
       planCount,
       pendingCount,
@@ -40,11 +40,15 @@ export class DashboardService {
       budgetByCategory,
       costByCategory,
     ] = await Promise.all([
-      // Total budget (approved plans for target year)
-      this.prisma.budgetPlan.aggregate({
-        _sum: { totalAmount: true },
-        where: { year: targetYear, status: 'approved' },
-      }),
+      // Total budget computed from items (approved plans for target year)
+      this.prisma.$queryRaw<{ total: string }[]>`
+        SELECT COALESCE(SUM(bi.total_price), 0)::text as total
+        FROM budget_items bi
+        JOIN budget_categories bc ON bc.id = bi.category_id
+        JOIN budget_plans bp ON bp.id = bc.plan_id
+        WHERE bp.year = ${targetYear} AND bp.status = 'approved'
+          AND bp.deleted_at IS NULL
+      `,
 
       // Total spent (costs in date range)
       this.prisma.actualCost.aggregate({
@@ -85,7 +89,7 @@ export class DashboardService {
       `,
     ]);
 
-    const totalBudget = Number(budgetAgg._sum.totalAmount || 0);
+    const totalBudget = Number(budgetTotalResult[0]?.total || 0);
     const totalSpent = Number(costAgg._sum.amount || 0);
 
     // Build budget vs actual chart data
